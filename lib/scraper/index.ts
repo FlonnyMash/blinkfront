@@ -1,0 +1,87 @@
+"use server";
+
+import * as cheerio from "cheerio";
+import { ZodError } from "zod";
+
+import { SeoAuditSchema, type SeoAudit } from "@/lib/validations/seo";
+
+export type ScrapeUrlSuccess = { success: true; data: SeoAudit };
+export type ScrapeUrlFailure = { success: false; error: string };
+export type ScrapeUrlResult = ScrapeUrlSuccess | ScrapeUrlFailure;
+
+type CheerioLoaded = ReturnType<typeof cheerio.load>;
+
+function extractHeadingTexts($: CheerioLoaded, tag: "h1" | "h2"): string[] {
+  return $(tag)
+    .map((_, element) => $(element).text().trim())
+    .get()
+    .filter(Boolean);
+}
+
+function extractRawContent($: CheerioLoaded): string {
+  const body = $("body").clone();
+  body.find("script, style, noscript").remove();
+
+  return body.text().replace(/\s+/g, " ").trim();
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof ZodError) {
+    return `Validation failed: ${error.issues[0]?.message ?? "Invalid SEO audit data"}`;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "An unknown error occurred";
+}
+
+export async function scrapeUrl(url: string): Promise<ScrapeUrlResult> {
+  try {
+    try {
+      new URL(url);
+    } catch {
+      return { success: false, error: "Invalid URL" };
+    }
+
+    const response = await fetch(url, {
+      headers: { "User-Agent": "BlinkfrontSEOBot/1.0" },
+      redirect: "follow",
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `Failed to fetch URL (HTTP ${response.status})`,
+      };
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const titleText = $("title").first().text().trim();
+    const descriptionText = $('meta[name="description"]').attr("content")?.trim();
+
+    const rawContent = extractRawContent($);
+    const wordCount = rawContent.split(/\s+/).filter(Boolean).length;
+
+    const data = SeoAuditSchema.parse({
+      url,
+      meta: {
+        title: titleText || null,
+        description: descriptionText || null,
+      },
+      headings: {
+        h1: extractHeadingTexts($, "h1"),
+        h2: extractHeadingTexts($, "h2"),
+      },
+      wordCount,
+      rawContent,
+    });
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}

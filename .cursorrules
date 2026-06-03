@@ -1,0 +1,16 @@
+# Architecture & Tech Stack
+- Next.js App Router (React Server Components by default)
+- Strictly TypeScript
+- Tailwind CSS & shadcn/ui for styling
+- Vercel AI SDK for AI Orchestration
+- Zod for all data validation and LLM structured outputs
+
+# Core Philosophy: Schema-First & JSON-Driven
+- The entire system is driven by strict JSON schemas. 
+- Never build hardcoded, monolithic pages. Build modular UI components that map to JSON keys.
+- Separate business logic (Server Actions, Scrapers, AI prompts) strictly from the UI layer.
+
+# Development Rules
+- Keep components atomic and modular.
+- Optimize for 100/100 Lighthouse scores: minimal client-side JavaScript, favor Server Components.
+- When generating AI outputs, always use `generateObject` or `streamObject` from the Vercel AI SDK with a predefined Zod schema.
