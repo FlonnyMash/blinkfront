@@ -5,11 +5,14 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const input = path.join(root, "lib/deploy/publish.css");
 const output = path.join(root, "lib/deploy/site.css");
-
-execFileSync(
-  "npx",
-  ["@tailwindcss/cli", "-i", input, "-o", output],
-  { cwd: root, stdio: "inherit", shell: true },
+const tailwindCli = path.join(
+  root,
+  "node_modules/@tailwindcss/cli/dist/index.mjs",
 );
+
+execFileSync(process.execPath, [tailwindCli, "-i", input, "-o", output], {
+  cwd: root,
+  stdio: "inherit",
+});
 
 console.log(`Generated ${output}`);
