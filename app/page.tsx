@@ -1,4 +1,4 @@
-import { UrlInputForm } from "@/components/dashboard/url-input-form";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default function Home() {
   return (
@@ -7,7 +7,7 @@ export default function Home() {
         <h1 className="text-3xl font-semibold tracking-tight">
           Generate your high-performance site
         </h1>
-        <UrlInputForm />
+        <DashboardShell />
       </div>
     </main>
   );
