@@ -747,50 +747,59 @@ export function UrlInputForm({
         <div className="relative z-10 grid w-full grid-cols-1 gap-4 antialiased transition-opacity duration-200 ease-in-out md:grid-cols-12 md:gap-6 md:h-[calc(100vh-4rem)] md:overflow-hidden">
         <aside
           className={cn(
-            "flex flex-col gap-4 transition-all duration-300 md:col-span-4 md:overflow-y-auto md:pr-2",
+            "flex min-h-0 flex-col gap-4 transition-all duration-300 md:col-span-4 md:min-h-0 md:overflow-hidden md:pr-2",
             isSidebarCollapsed && "hidden",
           )}
         >
-          <StartNewScanDialog
-            onConfirm={handleConfirmReset}
-            trigger={
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-auto w-fit justify-start px-0 text-sm font-normal text-slate-500 hover:bg-transparent hover:text-slate-900"
-              >
-                ← Scan Another URL
-              </Button>
-            }
-          />
-          <ChatEditor
-            key={chatEditorKey}
-            currentWebsite={websiteData}
-            siteId={siteId ?? undefined}
-            seoInsights={seoData ? JSON.stringify(seoData) : undefined}
-            onUpdate={handleWebsiteUpdate}
-          />
+          <div className="shrink-0">
+            <StartNewScanDialog
+              onConfirm={handleConfirmReset}
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto w-fit justify-start px-0 text-sm font-normal text-slate-500 hover:bg-transparent hover:text-slate-900"
+                >
+                  ← Scan Another URL
+                </Button>
+              }
+            />
+          </div>
+          <div className="shrink-0">
+            <ChatEditor
+              key={chatEditorKey}
+              currentWebsite={websiteData}
+              siteId={siteId ?? undefined}
+              seoInsights={seoData ? JSON.stringify(seoData) : undefined}
+              onUpdate={handleWebsiteUpdate}
+            />
+          </div>
           {seoData ? (
-            <Accordion type="single" collapsible>
-              <AccordionItem
-                value="seo-audit"
-                className="rounded-xl border border-border bg-card px-4"
-              >
-                <AccordionTrigger className="gap-2 py-3 hover:no-underline">
-                  <BarChart3 className="size-4 shrink-0 text-slate-500" aria-hidden />
-                  View Original SEO Audit
-                </AccordionTrigger>
-                <AccordionContent>
-                  <SeoPreview
-                    variant="compact"
-                    seoData={seoData}
-                    user={user}
-                    onPrepareSignIn={onPrepareSignIn}
-                  />
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <Accordion type="single" collapsible>
+                <AccordionItem
+                  value="seo-audit"
+                  className="rounded-xl border border-border bg-card px-4"
+                >
+                  <AccordionTrigger className="gap-2 py-3 hover:no-underline">
+                    <BarChart3
+                      className="size-4 shrink-0 text-slate-500"
+                      aria-hidden
+                    />
+                    View Original SEO Audit
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <SeoPreview
+                      variant="compact"
+                      seoData={seoData}
+                      user={user}
+                      onPrepareSignIn={onPrepareSignIn}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
           ) : null}
         </aside>
         <section

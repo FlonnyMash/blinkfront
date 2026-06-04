@@ -374,7 +374,9 @@ function AuditRowLabel({
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       <StatusIcon passed={passed} />
-      <span className="min-w-0 truncate text-xs font-semibold">{label}</span>
+      <span className="min-w-0 break-words text-xs font-semibold sm:truncate">
+        {label}
+      </span>
     </div>
   );
 }
@@ -508,9 +510,9 @@ function PassedCheckRow({
   const status = getStatusDisplay(checkKey, check);
 
   return (
-    <div className="flex w-full min-h-8 items-center gap-3 py-0.5">
+    <div className="flex w-full min-w-0 min-h-8 flex-col gap-2 py-0.5 sm:flex-row sm:items-center sm:gap-3">
       <AuditRowLabel passed label={label} />
-      <div className="ml-auto flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3 sm:ml-auto">
         <AuditRowStatusCluster status={status} alignEnd={false} />
         <span className={CHEVRON_SLOT_CLASS} aria-hidden="true" />
       </div>
@@ -537,7 +539,7 @@ function FailedCheckRow({
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value={rowId} className="border-0">
-        <AccordionTrigger className="flex w-full min-h-8 items-center justify-start gap-3 py-0.5 hover:no-underline **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-3 **:data-[slot=accordion-trigger-icon]:shrink-0 **:data-[slot=accordion-trigger-icon]:text-muted-foreground/60">
+        <AccordionTrigger className="flex w-full min-w-0 min-h-8 flex-col items-stretch justify-start gap-2 py-0.5 hover:no-underline sm:flex-row sm:items-center sm:gap-3 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-3 **:data-[slot=accordion-trigger-icon]:shrink-0 **:data-[slot=accordion-trigger-icon]:text-muted-foreground/60">
           <AuditRowLabel passed={false} label={label} />
           <AuditRowStatusCluster
             status={status}
@@ -548,7 +550,7 @@ function FailedCheckRow({
         <AccordionContent className="space-y-2 pb-1 pl-5">
           <div className="space-y-1">
             <p className="text-xs font-semibold text-foreground">What we found:</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
+            <p className="break-words text-xs leading-relaxed text-muted-foreground">
               {getFoundDescription(checkKey, check)}
             </p>
           </div>
@@ -556,7 +558,7 @@ function FailedCheckRow({
             <p className="text-xs font-semibold text-foreground">
               ✨ AI Auto-Fix applied:
             </p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
+            <p className="break-words text-xs leading-relaxed text-muted-foreground">
               {getAiAutoFixExplanation(checkKey)}
             </p>
           </div>
@@ -565,7 +567,7 @@ function FailedCheckRow({
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
                 Technical details
               </p>
-              <p className="break-all text-[11px] leading-relaxed text-muted-foreground/90">
+              <p className="break-words text-[11px] leading-relaxed text-muted-foreground/90">
                 {technicalDetails}
               </p>
             </div>
@@ -596,26 +598,27 @@ function CategoryBentoCard({
     <div
       className={cn(
         CATEGORY_CARD_SURFACE_CLASS,
-        compact ? "p-3.5" : "p-5",
+        "min-w-0 overflow-hidden",
+        compact ? "p-3.5" : "p-4 md:p-5",
         pulseGrid && "animate-pulse",
       )}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800/50">
+      <div className="flex min-w-0 items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800/50">
         <h3
           className={cn(
-            "font-semibold tracking-tight",
+            "min-w-0 shrink font-semibold tracking-tight",
             compact ? "text-xs" : "text-sm",
           )}
         >
           {category.label}
         </h3>
         {visibleFailures > 0 ? (
-          <span className="rounded-full bg-slate-100/50 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+          <span className="shrink-0 rounded-full bg-slate-100/50 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
             {visibleFailures}{" "}
             {visibleFailures === 1 ? "issue" : "issues"}
           </span>
         ) : (
-          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-500">
+          <span className="shrink-0 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-500">
             Passed
           </span>
         )}
@@ -650,7 +653,7 @@ function BentoGridSkeleton({ compact = false }: { compact?: boolean }) {
     <div
       className={cn(
         "grid grid-cols-1",
-        compact ? "gap-2" : "gap-3 sm:grid-cols-2",
+        compact ? "gap-2" : "gap-3 md:grid-cols-2",
       )}
     >
       {CATEGORY_KEYS.map((key) => (
@@ -698,13 +701,13 @@ export function SeoPreview({
   return (
     <Card
       className={cn(
-        "relative gap-0 overflow-hidden rounded-2xl border border-slate-200/50 bg-white/80 py-0 shadow-sm ring-0 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-950/80",
+        "relative w-full max-w-full gap-0 overflow-hidden rounded-2xl border border-slate-200/50 bg-white/80 py-0 shadow-sm ring-0 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-950/80",
         className,
       )}
     >
       {showGuestPreviewBar ? (
         <div
-          className="relative z-10 flex items-center gap-2 border-b border-slate-200/50 bg-white/50 px-5 py-2 text-xs text-muted-foreground backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/40"
+          className="relative z-10 flex items-center gap-2 border-b border-slate-200/50 bg-white/50 px-4 py-2 text-xs text-muted-foreground backdrop-blur-sm md:px-5 dark:border-slate-800/50 dark:bg-slate-900/40"
           role="status"
         >
           <Sparkles className="size-3.5 shrink-0 opacity-60" aria-hidden />
@@ -727,28 +730,43 @@ export function SeoPreview({
 
       <CardContent
         className={cn(
-          "relative z-10 space-y-4",
-          isCompact ? "px-3.5 pt-3.5 pb-3.5" : "px-5 pt-5 pb-5",
+          "relative z-10 w-full max-w-full space-y-4 overflow-hidden",
+          isCompact ? "px-3.5 pt-3.5 pb-3.5" : "p-4 md:p-5",
         )}
       >
         <div
           className={cn(
-            "flex items-center",
-            isCompact ? "gap-3" : "gap-5",
+            "flex w-full min-w-0 flex-col items-center overflow-hidden",
+            isCompact ? "gap-3 sm:flex-row sm:items-center" : "gap-4 sm:flex-row sm:items-start",
           )}
         >
-          {seoData ? (
-            <SeoScoreGauge score={seoData.overallScore} size={variant} />
-          ) : isAuditing ? (
-            <Skeleton
-              className={cn(
-                "shrink-0 rounded-full",
-                isCompact ? "size-20" : "size-28",
-              )}
-            />
-          ) : null}
+          <div
+            className={cn(
+              "flex w-fit max-w-full shrink-0 flex-col items-center gap-3",
+              isCompact ? "min-w-20" : "min-w-28",
+            )}
+          >
+            {seoData ? (
+              <SeoScoreGauge score={seoData.overallScore} size={variant} />
+            ) : isAuditing ? (
+              <Skeleton
+                className={cn(
+                  "rounded-full",
+                  isCompact ? "size-20" : "size-28",
+                )}
+              />
+            ) : null}
 
-          <div className="min-w-0 flex-1 space-y-1">
+            {showOptimizeButton ? (
+              <SeoOptimizeCta
+                showAuditCta={showOptimizeCta}
+                onOptimizeWithAI={onOptimizeWithAI!}
+                className="w-auto self-center"
+              />
+            ) : null}
+          </div>
+
+          <div className="min-w-0 w-full flex-1 space-y-1 text-center sm:text-left">
             <h2
               className={cn(
                 "font-semibold tracking-tight",
@@ -769,7 +787,7 @@ export function SeoPreview({
                 })}
               </p>
             ) : null}
-            <p className="text-sm text-muted-foreground">
+            <p className="break-words text-sm text-muted-foreground">
               {isScraping && !isAuditing
                 ? "Fetching page content and preparing your SEO audit…"
                 : isAuditing
@@ -781,20 +799,12 @@ export function SeoPreview({
                       : "Deterministic on-page SEO analysis."}
             </p>
           </div>
-
-          {showOptimizeButton ? (
-            <SeoOptimizeCta
-              showAuditCta={showOptimizeCta}
-              onOptimizeWithAI={onOptimizeWithAI!}
-              className="shrink-0 self-center"
-            />
-          ) : null}
         </div>
 
         <div
           className={cn(
-            "grid grid-cols-1",
-            isCompact ? "gap-2" : "gap-3 sm:grid-cols-2",
+            "grid w-full max-w-full grid-cols-1 overflow-hidden",
+            isCompact ? "gap-2" : "gap-3 md:grid-cols-2",
             !seoData && isAuditing && "animate-pulse",
           )}
           aria-busy={isAuditing && !seoData}
@@ -816,9 +826,9 @@ export function SeoPreview({
       </CardContent>
 
       {showGeneratingFooter ? (
-        <CardFooter className="relative z-10 gap-2 border-t border-slate-100 bg-muted/30 py-2.5 text-sm text-muted-foreground dark:border-slate-800/50">
+        <CardFooter className="relative z-10 gap-2 border-t border-slate-100 bg-muted/30 px-4 py-2.5 text-sm text-muted-foreground md:px-5 dark:border-slate-800/50">
           <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-          <span>Generating layout from audit insights…</span>
+          <span className="break-words">Generating layout from audit insights…</span>
         </CardFooter>
       ) : null}
     </Card>

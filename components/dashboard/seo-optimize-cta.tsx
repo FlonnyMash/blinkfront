@@ -25,40 +25,43 @@ export function SeoOptimizeCta({
       )}
       aria-hidden={!showAuditCta}
     >
-      <div className="relative inline-flex">
+      <Button
+        type="button"
+        onClick={onOptimizeWithAI}
+        disabled={!showAuditCta}
+        tabIndex={showAuditCta ? 0 : -1}
+        aria-label="Optimize layout with AI to fix SEO issues found in your audit"
+        className={cn(
+          "relative isolate h-10 min-h-10 w-auto max-w-full shrink-0 overflow-hidden rounded-full border-0 bg-transparent p-0 text-sm shadow-none",
+          "transition-transform duration-300 ease-out",
+          "hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]",
+          "ring-0 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-violet-300/60",
+          "disabled:pointer-events-none disabled:opacity-0",
+        )}
+      >
         <span
-          className={cn(
-            "pointer-events-none absolute -right-0.5 -top-0.5 z-10 size-2.5 rounded-full bg-white/90 shadow-[0_0_10px_3px_rgba(255,255,255,0.55)]",
-            showAuditCta && "animate-pulse",
-          )}
           aria-hidden
-        />
-        <Button
-          type="button"
-          onClick={onOptimizeWithAI}
-          disabled={!showAuditCta}
-          tabIndex={showAuditCta ? 0 : -1}
-          aria-label="Optimize layout with AI to fix SEO issues found in your audit"
-          className={cn(
-            "h-10 min-h-10 w-auto shrink-0 gap-0 whitespace-nowrap rounded-full border-0 px-5 text-sm",
-            "bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600",
-            "font-medium text-white",
-            "ring-1 ring-inset ring-white/10",
-            "shadow-lg shadow-indigo-500/30",
-            "transition-all duration-300 ease-out",
-            "hover:scale-[1.02] hover:from-indigo-500 hover:via-violet-500 hover:to-indigo-500 hover:shadow-xl hover:shadow-indigo-500/50",
-            "active:translate-y-0 active:scale-95",
-            "focus-visible:ring-3 focus-visible:ring-white/25",
-            "disabled:pointer-events-none disabled:opacity-0",
-          )}
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-full"
         >
+          <span
+            className={cn(
+              "absolute inset-0 rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700",
+              "shadow-md shadow-indigo-600/25 transition-all duration-300",
+              "group-hover/button:from-indigo-500 group-hover/button:via-violet-500 group-hover/button:to-indigo-600",
+              "group-hover/button:shadow-lg group-hover/button:shadow-violet-500/35",
+            )}
+          />
+          <span className="absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-white/5 to-transparent" />
+          <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/20" />
+        </span>
+        <span className="relative z-10 inline-flex h-full w-full items-center justify-center gap-2 whitespace-nowrap px-6 font-medium text-white">
           <Sparkles
-            className="mr-2 h-4 w-4 shrink-0 text-white"
+            className="size-4 shrink-0 text-white/95 transition-transform duration-300 group-hover/button:scale-110"
             aria-hidden
           />
           Optimize Layout with AI
-        </Button>
-      </div>
+        </span>
+      </Button>
     </div>
   );
 }

@@ -45,13 +45,13 @@ export function SeoAuditPanel({
   return (
     <div
       className={cn(
-        "w-full",
+        "w-full max-w-full overflow-hidden",
         entrance === "slide-up" && "animate-slide-up-panel",
         entrance === "fade" && "animate-fade-in",
         className,
       )}
     >
-      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white/90 shadow-lg ring-1 ring-slate-200/50 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/90 dark:ring-slate-800/50">
+      <div className="w-full max-w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white/90 shadow-lg ring-1 ring-slate-200/50 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/90 dark:ring-slate-800/50">
         {embedProgress ? (
           <GenerationProgress
             isLoading={isLoading}
