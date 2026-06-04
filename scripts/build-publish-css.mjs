@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const input = path.join(root, "lib/deploy/publish.css");
 const output = path.join(root, "lib/deploy/site.css");
 
-function resolveTailwindCli(): string[] {
+function resolveTailwindCli() {
   const bundledCli = path.join(
     root,
     "node_modules/@tailwindcss/cli/dist/index.mjs",
