@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @source "../../components/blocks/**/*.tsx";
+@source "../../components/renderer/LayoutRenderer.tsx";
 @source "../../lib/deploy/render-html.tsx";
 @source "../../components/ui/button.tsx";
 @source "../../components/ui/card.tsx";

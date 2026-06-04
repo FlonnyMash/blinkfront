@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import type { EditWebsiteResult } from "@/lib/ai/edit-site";
 import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
-import type { Website } from "@/lib/validations/website";
+import type { Website } from "@/types/layout";
 
 type ChatEditorProps = {
   currentData: Website;

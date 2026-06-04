@@ -1,5 +1,10 @@
+import {
+  buildStaticSiteDeploymentFiles,
+  decodeStaticSiteFromBase64,
+  type VercelDeploymentFile,
+} from "@/lib/deploy/deployment-files";
 import { renderWebsiteHtml } from "@/lib/deploy/render-html";
-import type { Website } from "@/lib/validations/website";
+import type { Website } from "@/types/layout";
 
 export type DeployWebsiteSuccess = {
   success: true;
@@ -10,6 +15,17 @@ export type DeployWebsiteSuccess = {
 
 export type DeployWebsiteFailure = { success: false; error: string };
 export type DeployWebsiteResult = DeployWebsiteSuccess | DeployWebsiteFailure;
+
+export type CreateDeploymentFromBase64Success = {
+  success: true;
+  url: string;
+  deploymentId: string;
+};
+
+export type CreateDeploymentFromBase64Failure = { success: false; error: string };
+export type CreateDeploymentFromBase64Result =
+  | CreateDeploymentFromBase64Success
+  | CreateDeploymentFromBase64Failure;
 
 export type DeploymentStatusResult =
   | { success: true; status: "READY" | "BUILDING" | "ERROR"; url?: string }
@@ -295,31 +311,11 @@ export async function getDeploymentStatus(
   }
 }
 
-export async function deployWebsite(
-  data: Website,
-  subdomain: string,
-): Promise<DeployWebsiteResult> {
-  const envResult = getVercelEnv();
-  if ("success" in envResult && envResult.success === false) {
-    return envResult;
-  }
-
-  const env = envResult as VercelEnv;
-  const projectError = await verifyPublishProject(env);
-  if (projectError) {
-    return projectError;
-  }
-
-  const slug = normalizeSubdomain(subdomain, env.deploymentDomain);
-
-  if (!slug) {
-    return {
-      success: false,
-      error:
-        "Invalid subdomain. Use lowercase letters, numbers, and hyphens (2–63 characters).",
-    };
-  }
-
+async function uploadStaticSiteFiles(
+  env: VercelEnv,
+  slug: string,
+  files: VercelDeploymentFile[],
+): Promise<CreateDeploymentFromBase64Result> {
   const alias = `${slug}.${env.deploymentDomain}`;
   let verifiedDomains: Set<string>;
 
@@ -338,8 +334,6 @@ export async function deployWebsite(
   const useCustomAlias = canAssignCustomAlias(env.deploymentDomain, verifiedDomains);
 
   try {
-    const { html, css } = await renderWebsiteHtml(data);
-
     const deployment = await vercelFetch<VercelDeploymentResponse>(
       env,
       "/v13/deployments",
@@ -352,16 +346,7 @@ export async function deployWebsite(
           public: true,
           ...(useCustomAlias ? { alias: [alias] } : {}),
           projectSettings: STATIC_PROJECT_SETTINGS,
-          files: [
-            {
-              file: "index.html",
-              data: Buffer.from(html, "utf8").toString("base64"),
-            },
-            {
-              file: "style.css",
-              data: Buffer.from(css, "utf8").toString("base64"),
-            },
-          ],
+          files,
         }),
       },
     );
@@ -379,6 +364,103 @@ export async function deployWebsite(
       success: true,
       url: publicUrl,
       deploymentId: deployment.id,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Deployment failed",
+    };
+  }
+}
+
+async function prepareStaticSiteDeployment(
+  subdomain: string,
+): Promise<
+  | { success: false; error: string }
+  | { success: true; env: VercelEnv; slug: string }
+> {
+  const envResult = getVercelEnv();
+  if ("success" in envResult && envResult.success === false) {
+    return envResult;
+  }
+
+  const env = envResult as VercelEnv;
+  const projectError = await verifyPublishProject(env);
+  if (projectError) {
+    return projectError;
+  }
+
+  const slug = normalizeSubdomain(subdomain, env.deploymentDomain);
+  if (!slug) {
+    return {
+      success: false,
+      error:
+        "Invalid subdomain. Use lowercase letters, numbers, and hyphens (2–63 characters).",
+    };
+  }
+
+  return { success: true, env, slug };
+}
+
+/**
+ * Decodes Base64 site assets, uploads them to Vercel, and returns only the live URL
+ * and deployment ID — never the raw HTML/CSS payload.
+ */
+export async function createDeploymentFromBase64(
+  encodedHtml: string,
+  encodedCss: string,
+  subdomain: string,
+): Promise<CreateDeploymentFromBase64Result> {
+  const prepared = await prepareStaticSiteDeployment(subdomain);
+  if (!prepared.success) {
+    return prepared;
+  }
+
+  const decoded = decodeStaticSiteFromBase64(encodedHtml, encodedCss);
+  if (!decoded.success) {
+    return decoded;
+  }
+
+  const filesResult = buildStaticSiteDeploymentFiles(
+    decoded.indexHtml,
+    decoded.styleCss,
+  );
+  if (!filesResult.success) {
+    return filesResult;
+  }
+
+  return uploadStaticSiteFiles(prepared.env, prepared.slug, filesResult.files);
+}
+
+export async function deployWebsite(
+  data: Website,
+  subdomain: string,
+): Promise<DeployWebsiteResult> {
+  const prepared = await prepareStaticSiteDeployment(subdomain);
+  if (!prepared.success) {
+    return prepared;
+  }
+
+  try {
+    const { html, css } = await renderWebsiteHtml(data);
+    const filesResult = buildStaticSiteDeploymentFiles(html, css);
+
+    if (!filesResult.success) {
+      return { success: false, error: filesResult.error };
+    }
+
+    const deployment = await uploadStaticSiteFiles(
+      prepared.env,
+      prepared.slug,
+      filesResult.files,
+    );
+
+    if (!deployment.success) {
+      return deployment;
+    }
+
+    return {
+      ...deployment,
       status: "BUILDING",
     };
   } catch (error) {

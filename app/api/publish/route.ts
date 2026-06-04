@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  createDeploymentFromBase64,
   deployWebsite,
   getDeploymentStatus,
   normalizeSubdomain,
@@ -10,16 +11,29 @@ import {
   updateSiteStatusByDeploymentId,
   upsertSiteRecord,
 } from "@/lib/sites";
-import { WebsiteSchema } from "@/lib/validations/website";
+import { WebsiteSchema } from "@/types/layout";
 
 export const maxDuration = 60;
 
-const PublishRequestSchema = z
+const PublishWebsiteRequestSchema = z
   .object({
     website: WebsiteSchema,
     subdomain: z.string().min(1),
   })
   .strict();
+
+const PublishBase64RequestSchema = z
+  .object({
+    encodedHtml: z.string().min(1),
+    encodedCss: z.string().min(1),
+    subdomain: z.string().min(1),
+  })
+  .strict();
+
+const PublishRequestSchema = z.union([
+  PublishWebsiteRequestSchema,
+  PublishBase64RequestSchema,
+]);
 
 export async function POST(request: Request) {
   try {
@@ -56,7 +70,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await deployWebsite(parsed.data.website, slug);
+    const result =
+      "website" in parsed.data
+        ? await deployWebsite(parsed.data.website, slug)
+        : await createDeploymentFromBase64(
+            parsed.data.encodedHtml,
+            parsed.data.encodedCss,
+            slug,
+          );
 
     if (result.success) {
       await upsertSiteRecord({

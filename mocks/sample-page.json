@@ -1,0 +1,118 @@
+{
+  "theme": {
+    "colors": {
+      "primary": "#0071e3",
+      "secondary": "#5856d6",
+      "background": "#ffffff",
+      "text": "#1d1d1f"
+    },
+    "typography": {
+      "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+    }
+  },
+  "layout": [
+    {
+      "type": "Hero",
+      "content": {
+        "headline": "Ship high-performance sites in minutes",
+        "subheadline": "Schema-first generation maps every block to battle-tested UI components with zero layout drift.",
+        "ctaText": "Start building",
+        "sectionClassName": "mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-20 text-center",
+        "containerClassName": "flex flex-col items-center gap-6"
+      }
+    },
+    {
+      "type": "Features",
+      "content": {
+        "heading": "Built for speed and clarity",
+        "items": [
+          {
+            "title": "Structured output",
+            "description": "Every page is validated against a strict Zod schema before it reaches the renderer.",
+            "iconClassName": "size-5 text-[#0071e3]"
+          },
+          {
+            "title": "Component mapping",
+            "description": "Layout blocks resolve directly to Server Components with minimal client JavaScript.",
+            "iconClassName": "size-5 text-[#0071e3]"
+          },
+          {
+            "title": "Theme tokens",
+            "description": "Colors and typography flow from JSON tokens into Tailwind-friendly presentation.",
+            "iconClassName": "size-5 text-[#0071e3]"
+          }
+        ],
+        "sectionClassName": "mx-auto w-full max-w-5xl px-4 py-16",
+        "gridClassName": "grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+      }
+    },
+    {
+      "type": "Testimonials",
+      "content": {
+        "heading": "What teams are saying",
+        "items": [
+          {
+            "quote": "We cut landing-page build time from days to under an hour without sacrificing Lighthouse scores.",
+            "author": "Jordan Lee",
+            "role": "Head of Growth, Northwind"
+          },
+          {
+            "quote": "The block schema keeps our AI output predictable — no more broken layouts in production.",
+            "author": "Priya Shah",
+            "role": "Staff Engineer, Contoso"
+          },
+          {
+            "quote": "Publishing to Vercel is one click. The JSON-to-HTML pipeline just works.",
+            "author": "Marcus Chen",
+            "role": "Founder, Lumen Labs"
+          }
+        ],
+        "sectionClassName": "w-full bg-[#1d1d1f]/5 py-16",
+        "gridClassName": "mx-auto grid max-w-5xl gap-6 px-4 lg:grid-cols-3"
+      }
+    },
+    {
+      "type": "FAQ",
+      "content": {
+        "heading": "Frequently asked questions",
+        "items": [
+          {
+            "question": "How does the layout schema work?",
+            "answer": "Each block has a type and a strongly typed content object. The render engine maps types to React components."
+          },
+          {
+            "question": "Can I customize theme tokens?",
+            "answer": "Yes. Set primary, secondary, background, and text colors plus a fontFamily stack in the theme object."
+          },
+          {
+            "question": "Is the output optimized for performance?",
+            "answer": "Blocks favor Server Components, semantic HTML, and Tailwind utility classes for lean bundles."
+          }
+        ],
+        "sectionClassName": "mx-auto w-full max-w-2xl px-4 py-16"
+      }
+    },
+    {
+      "type": "CTA",
+      "content": {
+        "headline": "Ready to generate your next site?",
+        "subheadline": "Paste a URL, get structured JSON, publish to the edge.",
+        "buttonText": "Generate now",
+        "sectionClassName": "mx-auto w-full max-w-5xl px-4 py-16",
+        "containerClassName": "flex flex-col items-center gap-6 rounded-xl px-8 py-16 text-center"
+      }
+    },
+    {
+      "type": "Footer",
+      "content": {
+        "copyrightText": "© 2026 Blinkfront. All rights reserved.",
+        "links": [
+          { "label": "Privacy", "href": "#privacy" },
+          { "label": "Terms", "href": "#terms" },
+          { "label": "Contact", "href": "#contact" }
+        ],
+        "sectionClassName": "mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row"
+      }
+    }
+  ]
+}

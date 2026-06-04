@@ -39,8 +39,24 @@ Without a verified custom domain, published sites use their unique Vercel deploy
 
 1. The dashboard sends the current `Website` JSON and subdomain slug to `POST /api/publish`.
 2. The API renders static `index.html` and `style.css` from the existing block components.
-3. `lib/deploy/vercel.ts` uploads both files to the Vercel REST API and assigns a production alias.
+3. `lib/deploy/vercel.ts` uploads both files to the Vercel REST API (with `encoding: "base64"`) and assigns a production alias.
 4. The UI polls deployment status until the site is ready, then shows the live URL.
+
+### Base64 publish payload
+
+If your generator emits Base64-encoded assets instead of `Website` JSON, POST:
+
+```json
+{
+  "encodedHtml": "<base64 or data:text/html;base64,...>",
+  "encodedCss": "<base64 or data:text/css;base64,...>",
+  "subdomain": "my-site"
+}
+```
+
+The API decodes both files server-side, deploys them, and responds with `{ success, url, deploymentId }` only — never the raw HTML/CSS.
+
+**Important:** Each inlined file in the Vercel deployments API must include `"encoding": "base64"`. Without it, Vercel serves the Base64 string literally in the browser instead of decoding it to HTML.
 
 ## Local development notes
 

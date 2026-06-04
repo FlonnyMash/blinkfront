@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 
 import { requireOpenAiKey } from "@/lib/ai/require-openai-key";
 import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
-import { WebsiteSchema, type Website } from "@/lib/validations/website";
+import { WebsiteSchema, type Website } from "@/types/layout";
 
 export type EditWebsiteSuccess = { success: true; data: Website };
 export type EditWebsiteFailure = { success: false; error: string };
@@ -39,17 +39,14 @@ export async function editWebsiteData(
       schema: WebsiteSchema,
       schemaName: "Website",
       schemaDescription:
-        "Full modular landing page with header, hero, features, testimonials, FAQ, CTA section, and footer",
+        "Component-driven landing page with theme tokens and ordered layout blocks",
       system: `You are a world-class Web Designer and Copywriter. You are editing an existing website layout. Here is the current JSON: ${JSON.stringify(currentData)}. You must strictly respect these SEO insights to maintain optimization: ${JSON.stringify(seoInsights)}. User request: ${userPrompt}. Return the complete, updated, and valid JSON object.
 
-Visual and design changes MUST be applied via the theme object:
-- theme.stylePreset: "default" | "apple" | "minimal" | "bold" — use "apple" for clean Apple-like aesthetics (generous whitespace, refined typography).
-- theme.primaryColor: CSS hex for buttons and CTA section background.
-- theme.textColor: CSS hex for headings and primary text — set to blue (e.g. #2563eb) when the user asks for blue text.
-- theme.mutedTextColor: CSS hex for secondary/body text.
-- theme.backgroundColor: CSS hex for page background.
+Visual and design changes MUST be applied via theme:
+- theme.colors.primary, secondary, background, text — valid CSS hex colors.
+- theme.typography.fontFamily — CSS font stack.
 
-Always update theme when the user requests color, style, or design changes. Also update copy blocks when relevant.`,
+Layout blocks use type + content. Preserve block order unless the user asks to reorder. Update block content when the user requests copy or section changes.`,
       prompt: userPrompt,
     });
 

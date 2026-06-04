@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { DashboardHeader } from "@/components/dashboard/header";
 import { UrlInputForm } from "@/components/dashboard/url-input-form";
-import type { Website } from "@/lib/validations/website";
+import type { Website } from "@/types/layout";
 
 type PublishSuccessResponse = {
   success: true;

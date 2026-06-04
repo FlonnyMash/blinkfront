@@ -13,12 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { ChatEditor } from "@/components/dashboard/chat-editor";
 import { SeoPreview } from "@/components/dashboard/seo-preview";
-import { WebsiteRenderer } from "@/components/render-engine/website-renderer";
+import { LayoutRenderer } from "@/components/renderer/LayoutRenderer";
 import type { ScrapeUrlResult } from "@/lib/scraper";
 import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
 import { normalizeUrl } from "@/lib/utils";
 import type { SeoAudit } from "@/lib/validations/seo";
-import type { Website } from "@/lib/validations/website";
+import type { Website } from "@/types/layout";
 import type { GenerateWebsiteResult } from "@/lib/ai/generate-site";
 
 type UrlInputFormProps = {
@@ -255,7 +255,7 @@ export function UrlInputForm({
               <CardTitle>Live Preview</CardTitle>
             </CardHeader>
             <CardContent>
-              <WebsiteRenderer
+              <LayoutRenderer
                 key={JSON.stringify(websiteData)}
                 data={websiteData}
               />

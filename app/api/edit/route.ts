@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { editWebsiteData } from "@/lib/ai/edit-site";
 import { SeoAuditSchema } from "@/lib/validations/seo-audit";
-import { WebsiteSchema } from "@/lib/validations/website";
+import { WebsiteSchema } from "@/types/layout";
 
 export const maxDuration = 60;
 
