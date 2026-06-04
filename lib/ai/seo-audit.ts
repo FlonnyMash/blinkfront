@@ -3,6 +3,7 @@
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 
+import { requireOpenAiKey } from "@/lib/ai/require-openai-key";
 import { SeoAuditSchema, type SeoAuditInsights } from "@/lib/validations/seo-audit";
 
 const SYSTEM_PROMPT = `You are an expert SEO strategist and content optimizer.
@@ -19,6 +20,8 @@ Rules:
 - Do not include markdown or fields outside the schema.`;
 
 export async function performSeoAudit(rawContent: string): Promise<SeoAuditInsights> {
+  requireOpenAiKey();
+
   const { object } = await generateObject({
     model: openai.chat("gpt-4o-mini"),
     schema: SeoAuditSchema,

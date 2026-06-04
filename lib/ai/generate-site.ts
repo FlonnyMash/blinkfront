@@ -4,6 +4,7 @@ import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { ZodError } from "zod";
 
+import { requireOpenAiKey } from "@/lib/ai/require-openai-key";
 import { performSeoAudit } from "@/lib/ai/seo-audit";
 import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
 import { WebsiteSchema, type Website } from "@/lib/validations/website";
@@ -51,6 +52,8 @@ export async function generateWebsiteData(
     if (!scrapedContent.trim()) {
       return { success: false, error: "Scraped content is required" };
     }
+
+    requireOpenAiKey();
 
     const audit = seoAudit ?? (await performSeoAudit(scrapedContent));
 

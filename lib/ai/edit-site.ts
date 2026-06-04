@@ -4,6 +4,7 @@ import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { ZodError } from "zod";
 
+import { requireOpenAiKey } from "@/lib/ai/require-openai-key";
 import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
 import { WebsiteSchema, type Website } from "@/lib/validations/website";
 
@@ -32,6 +33,8 @@ export async function editWebsiteData(
     if (!userPrompt.trim()) {
       return { success: false, error: "Edit prompt is required" };
     }
+
+    requireOpenAiKey();
 
     const { object } = await generateObject({
       model: openai.chat("gpt-4o-mini"),
