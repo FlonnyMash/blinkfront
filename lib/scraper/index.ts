@@ -1,5 +1,3 @@
-"use server";
-
 import * as cheerio from "cheerio";
 import { ZodError } from "zod";
 

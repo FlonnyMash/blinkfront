@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { editWebsiteData } from "@/lib/ai/edit-site";
+import type { EditWebsiteResult } from "@/lib/ai/edit-site";
 import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
 import type { Website } from "@/lib/validations/website";
 
@@ -38,15 +38,31 @@ export function ChatEditor({
     setError(null);
 
     try {
-      const result = await editWebsiteData(currentData, prompt, seoInsights);
+      const response = await fetch("/api/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentData,
+          userPrompt: prompt,
+          seoInsights,
+        }),
+      });
 
-      if (!result.success) {
-        setError(result.error);
+      const result = (await response.json()) as EditWebsiteResult;
+
+      if (!response.ok || !result.success) {
+        setError(result.success === false ? result.error : "Failed to edit website");
         return;
       }
 
       onUpdate(result.data);
       setPrompt("");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to edit website",
+      );
     } finally {
       setIsEditing(false);
     }

@@ -14,18 +14,30 @@ import { Input } from "@/components/ui/input";
 import { ChatEditor } from "@/components/dashboard/chat-editor";
 import { SeoPreview } from "@/components/dashboard/seo-preview";
 import { WebsiteRenderer } from "@/components/render-engine/website-renderer";
-import { generateWebsiteData } from "@/lib/ai/generate-site";
-import { performSeoAudit } from "@/lib/ai/seo-audit";
+import type { ScrapeUrlResult } from "@/lib/scraper";
 import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
-import { scrapeUrl } from "@/lib/scraper";
 import { normalizeUrl } from "@/lib/utils";
 import type { SeoAudit } from "@/lib/validations/seo";
 import type { Website } from "@/lib/validations/website";
+import type { GenerateWebsiteResult } from "@/lib/ai/generate-site";
 
 type UrlInputFormProps = {
   websiteData: Website | null;
   onWebsiteDataChange: (data: Website | null) => void;
 };
+
+type SeoAuditApiResponse =
+  | { success: true; data: SeoAuditInsights }
+  | { success: false; error: string };
+
+async function readApiError(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await response.json()) as { error?: string };
+    return body.error ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export function UrlInputForm({
   websiteData,
@@ -58,7 +70,18 @@ export function UrlInputForm({
     onWebsiteDataChange(null);
 
     try {
-      const scrapedResult = await scrapeUrl(normalizedUrl);
+      const scrapeResponse = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: normalizedUrl }),
+      });
+
+      if (!scrapeResponse.ok) {
+        setError(await readApiError(scrapeResponse, "Failed to scrape URL"));
+        return;
+      }
+
+      const scrapedResult = (await scrapeResponse.json()) as ScrapeUrlResult;
 
       if (!scrapedResult.success) {
         setError(scrapedResult.error);
@@ -69,32 +92,48 @@ export function UrlInputForm({
       setIsLoading(false);
       setIsAuditing(true);
 
-      let auditResult: SeoAuditInsights;
-      try {
-        auditResult = await performSeoAudit(scrapedResult.data.rawContent);
-        setSeoData(auditResult);
-      } catch (auditError) {
+      const auditResponse = await fetch("/api/seo-audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawContent: scrapedResult.data.rawContent }),
+      });
+
+      const auditResult = (await auditResponse.json()) as SeoAuditApiResponse;
+
+      if (!auditResponse.ok || !auditResult.success) {
         setError(
-          auditError instanceof Error
-            ? auditError.message
-            : "SEO audit failed",
+          auditResult.success === false
+            ? auditResult.error
+            : await readApiError(auditResponse, "SEO audit failed"),
         );
         return;
       }
 
+      setSeoData(auditResult.data);
       setIsAuditing(false);
       setIsGenerating(true);
 
-      const aiResult = await generateWebsiteData(
-        scrapedResult.data.rawContent,
-        auditResult,
-      );
+      const generateResponse = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scrapedContent: scrapedResult.data.rawContent,
+          seoAudit: auditResult.data,
+        }),
+      });
 
-      if (!aiResult.success) {
-        setError(aiResult.error);
-      } else {
-        onWebsiteDataChange(aiResult.data);
+      const aiResult = (await generateResponse.json()) as GenerateWebsiteResult;
+
+      if (!generateResponse.ok || !aiResult.success) {
+        setError(
+          aiResult.success === false
+            ? aiResult.error
+            : await readApiError(generateResponse, "Failed to generate website"),
+        );
+        return;
       }
+
+      onWebsiteDataChange(aiResult.data);
     } catch (requestError) {
       setError(
         requestError instanceof TypeError
