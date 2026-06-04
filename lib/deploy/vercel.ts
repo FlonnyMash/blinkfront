@@ -30,8 +30,16 @@ type VercelDeploymentResponse = {
   readyState?: string;
   alias?: string[];
   aliasAssigned?: boolean;
-  error?: { message?: string };
+  error?: { message?: string; code?: string };
 };
+
+const STATIC_PROJECT_SETTINGS = {
+  framework: null,
+  buildCommand: null,
+  devCommand: null,
+  installCommand: null,
+  outputDirectory: null,
+} as const;
 
 function getVercelEnv(): VercelEnv | DeployWebsiteFailure {
   const token = process.env.VERCEL_TOKEN;
@@ -138,17 +146,23 @@ export async function getDeploymentStatus(
 
     if (readyState === "READY") {
       const alias = deployment.alias?.[0];
+      const deploymentUrl = deployment.url
+        ? `https://${deployment.url}`
+        : undefined;
       return {
         success: true,
         status: "READY",
-        url: alias ? `https://${alias}` : undefined,
+        url: alias ? `https://${alias}` : deploymentUrl,
       };
     }
 
     if (readyState === "ERROR" || readyState === "CANCELED") {
+      const errorMessage =
+        deployment.error?.message ??
+        "Deployment failed on Vercel. Use a separate static Vercel project for published sites (not your Next.js app project).";
       return {
-        success: true,
-        status: "ERROR",
+        success: false,
+        error: errorMessage,
       };
     }
 
@@ -197,6 +211,7 @@ export async function deployWebsite(
           project: env.projectId,
           target: "production",
           alias: [alias],
+          projectSettings: STATIC_PROJECT_SETTINGS,
           files: [
             {
               file: "index.html",
@@ -213,7 +228,7 @@ export async function deployWebsite(
 
     return {
       success: true,
-      url: fallbackUrl,
+      url: deployment.url ? `https://${deployment.url}` : fallbackUrl,
       deploymentId: deployment.id,
       status: "BUILDING",
     };

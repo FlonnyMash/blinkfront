@@ -7,7 +7,7 @@ This document describes how to configure domain-agnostic publishing for generate
 1. **Purchase a domain** and add it to your Vercel account or team.
 2. **Configure wildcard DNS** so tenant subdomains resolve to Vercel:
    - Add a DNS record: `*.yourdomain.com` → Vercel (follow [Vercel custom domain docs](https://vercel.com/docs/domains)).
-3. **Create a Vercel project** for published tenant sites (recommended: separate from the builder app).
+3. **Create a separate Vercel project** for published tenant sites — do **not** reuse your Next.js builder project. The builder runs `npm install` / `npm run build`; file-only API uploads have no `package.json` and will fail with `Command "npm install" exited with 254`. Create a static project (no framework) in the Vercel dashboard, or use the API with `"framework": null`.
 4. **Generate a Vercel access token** with deployment permissions from [Vercel Account Settings → Tokens](https://vercel.com/account/tokens).
 5. **Set environment variables** on the builder Next.js project (see below).
 6. **Redeploy the builder app** after changing environment variables.
