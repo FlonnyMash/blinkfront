@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AuthRequiredDialog } from "@/components/dashboard/auth-required-dialog";
 import { Button } from "@/components/ui/button";
@@ -45,12 +45,17 @@ export function DashboardHeader({
   onPrepareSignIn,
 }: DashboardHeaderProps) {
   const router = useRouter();
+  const [headerReady, setHeaderReady] = useState(false);
   const [open, setOpen] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [subdomain, setSubdomain] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const isGuest = !user;
+
+  useEffect(() => {
+    setHeaderReady(true);
+  }, []);
 
   function normalizeSlug(value: string): string {
     const trimmed = value.trim().toLowerCase();
@@ -91,6 +96,7 @@ export function DashboardHeader({
   }
 
   const canPublish = Boolean(websiteData) && !isPublishing;
+  const publishActive = headerReady && canPublish;
 
   const publishDialog = (
     <Dialog
@@ -102,7 +108,7 @@ export function DashboardHeader({
         }
       }}
     >
-      {!isGuest && canPublish ? (
+      {!isGuest && publishActive ? (
         <DialogTrigger asChild>
           <Button
             size="sm"
@@ -203,7 +209,7 @@ export function DashboardHeader({
               </Button>
             )}
 
-            {!isGuest && canPublish ? (
+            {!isGuest && publishActive ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -215,18 +221,15 @@ export function DashboardHeader({
               </Button>
             ) : null}
 
-            {canPublish && isGuest ? (
-              <Button
-                size="sm"
-                onClick={handlePublishClick}
-                className="bg-indigo-600 text-white hover:bg-indigo-700"
-              >
-                Publish
-              </Button>
-            ) : canPublish && !isGuest ? (
+            {publishActive && !isGuest ? (
               publishDialog
             ) : (
-              <Button size="sm" disabled>
+              <Button
+                size="sm"
+                disabled={!publishActive}
+                {...(publishActive ? { onClick: handlePublishClick } : {})}
+                className="bg-indigo-600 text-white hover:bg-indigo-700"
+              >
                 Publish
               </Button>
             )}

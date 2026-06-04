@@ -4,21 +4,37 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import {
+  BuilderAmbientBackground,
+  type BuilderBackgroundVariant,
+} from "@/components/builder/builder-ambient-background";
+import { BuilderFloatingBubbles } from "@/components/builder/builder-floating-bubbles";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { DeploymentStatusCard } from "@/components/dashboard/deployment-status-card";
-import { UrlInputForm } from "@/components/dashboard/url-input-form";
+import {
+  UrlInputForm,
+  type AuditView,
+  type BuilderStep,
+} from "@/components/dashboard/url-input-form";
 import { AuthRequiredDialog } from "@/components/dashboard/auth-required-dialog";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { useDeploymentPolling } from "@/hooks/useDeploymentPolling";
 import type { SessionUser } from "@/lib/auth/session";
-import { clearGuestDraft, loadGuestDraft } from "@/lib/guest-draft";
+import { clearGuestDraft } from "@/lib/guest-draft";
 import {
+  clearPendingDraft,
+  commitPendingDraftFromBuilder,
+  consumeSkipSiteIdHydration,
+  discardVolatileBuilderSession,
   fetchSiteLayout,
-  loadPendingDraft,
+  loadCommittedPendingDraft,
   savePendingDraftFromBuilder,
   saveSiteLayout,
   syncPendingDraftAfterAuth,
 } from "@/lib/site-layout-client";
+import type { SeoAuditResult } from "@/lib/validations/seo-audit-result";
 import { getBrandName, type Website } from "@/types/layout";
+import { cn } from "@/lib/utils";
 
 type PublishSuccessResponse = {
   success: true;
@@ -50,16 +66,78 @@ export function DashboardShell({
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [builderStep, setBuilderStep] = useState<BuilderStep>("audit");
+  const [auditView, setAuditView] = useState<AuditView>("hero");
+  const [backgroundVariant, setBackgroundVariant] =
+    useState<BuilderBackgroundVariant>("hero-orb");
+  const [initialSeoData, setInitialSeoData] = useState<SeoAuditResult | null>(
+    null,
+  );
+  const [initialSourceUrl, setInitialSourceUrl] = useState("");
+  const [initialWorkspaceCommitted, setInitialWorkspaceCommitted] =
+    useState(false);
+  const [hydrationReady, setHydrationReady] = useState(false);
   const hydratedForUser = useRef<string | null>(null);
+  const mountChecked = useRef(false);
+
+  useEffect(() => {
+    if (mountChecked.current) {
+      return;
+    }
+    mountChecked.current = true;
+    setHydrationReady(true);
+  }, []);
 
   const prepareSignIn = useCallback(() => {
+    if (builderStep !== "workspace") {
+      return;
+    }
     savePendingDraftFromBuilder({
       siteId: activeSiteId,
       website: websiteData,
     });
-  }, [activeSiteId, websiteData]);
+  }, [activeSiteId, websiteData, builderStep]);
+
+  const handleCommitWorkspace = useCallback(
+    async (input: {
+      seoData: SeoAuditResult | null;
+      sourceUrl: string;
+      guestId?: string;
+    }) => {
+      if (!websiteData || !activeSiteId) {
+        return;
+      }
+
+      commitPendingDraftFromBuilder({
+        siteId: activeSiteId,
+        website: websiteData,
+        seoData: input.seoData,
+        sourceUrl: input.sourceUrl,
+        guestId: input.guestId,
+      });
+
+      if (user) {
+        const saved = await saveSiteLayout(activeSiteId, websiteData);
+        if (!saved.success) {
+          toast.error(saved.error);
+        }
+      }
+    },
+    [activeSiteId, user, websiteData],
+  );
+
+  const handleAbandonVolatileSession = useCallback(() => {
+    setWebsiteData(null);
+    setActiveSiteId(null);
+    setInitialSeoData(null);
+    setInitialWorkspaceCommitted(false);
+  }, []);
 
   useEffect(() => {
+    if (!hydrationReady) {
+      return;
+    }
+
     const userKey = user?.id ?? "guest";
     if (hydratedForUser.current === userKey) {
       return;
@@ -68,12 +146,15 @@ export function DashboardShell({
     let cancelled = false;
 
     async function hydrateDraft() {
-      const pendingDraft = loadPendingDraft() ?? loadGuestDraft();
+      const committedDraft = loadCommittedPendingDraft();
 
-      if (pendingDraft) {
+      if (committedDraft) {
         if (!cancelled) {
-          setWebsiteData(pendingDraft.website);
-          setActiveSiteId(pendingDraft.siteId);
+          setWebsiteData(committedDraft.website);
+          setActiveSiteId(committedDraft.siteId);
+          setInitialSeoData(committedDraft.seoData ?? null);
+          setInitialSourceUrl(committedDraft.sourceUrl ?? "");
+          setInitialWorkspaceCommitted(true);
         }
 
         if (user) {
@@ -104,17 +185,13 @@ export function DashboardShell({
       }
 
       const siteIdToLoad = initialSiteId ?? null;
-      if (!siteIdToLoad) {
-        if (!cancelled) {
-          hydratedForUser.current = userKey;
+      if (siteIdToLoad && !consumeSkipSiteIdHydration()) {
+        const loaded = await fetchSiteLayout(siteIdToLoad);
+        if (!cancelled && loaded.success) {
+          setWebsiteData(loaded.data);
+          setActiveSiteId(siteIdToLoad);
+          setInitialWorkspaceCommitted(true);
         }
-        return;
-      }
-
-      const loaded = await fetchSiteLayout(siteIdToLoad);
-      if (!cancelled && loaded.success) {
-        setWebsiteData(loaded.data);
-        setActiveSiteId(siteIdToLoad);
       }
 
       if (!cancelled) {
@@ -127,7 +204,7 @@ export function DashboardShell({
     return () => {
       cancelled = true;
     };
-  }, [user, initialSiteId, router]);
+  }, [user, initialSiteId, router, hydrationReady]);
 
   useEffect(() => {
     if (websiteData) {
@@ -144,6 +221,17 @@ export function DashboardShell({
       }
     }
   }
+
+  const handleResetProject = useCallback(() => {
+    discardVolatileBuilderSession();
+    clearPendingDraft();
+    clearGuestDraft();
+    setWebsiteData(null);
+    setActiveSiteId(null);
+    setInitialSeoData(null);
+    setInitialSourceUrl("");
+    setInitialWorkspaceCommitted(false);
+  }, []);
 
   const {
     status: deploymentStatus,
@@ -245,59 +333,101 @@ export function DashboardShell({
     }
   }
 
+  const isImmersive =
+    builderStep === "generating" ||
+    builderStep === "ready" ||
+    builderStep === "workspace";
+  const showMarketingFooter = !isImmersive;
+  const isHeroView = auditView === "hero" && !isImmersive;
+
   return (
-    <>
-      <DashboardHeader
-        websiteData={websiteData}
-        isPublishing={isPublishing}
-        isSaving={isSaving}
-        user={user}
-        onPublish={handlePublish}
-        onSave={handleSave}
-        onPrepareSignIn={prepareSignIn}
-      />
-
-      <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
-        <div className="mb-8 space-y-3 text-center md:mb-10">
-          <p className="inline-flex items-center rounded-full border border-indigo-200/80 bg-indigo-50 px-3 py-1 text-xs font-medium tracking-wide text-indigo-700">
-            AI Site Builder
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
-            Generate your high-performance site
-          </h1>
-          <p className="mx-auto max-w-xl text-sm leading-relaxed text-slate-600 md:text-base">
-            Enter a URL, let AI rebuild your layout for speed and conversion,
-            then publish in one click.
-          </p>
-        </div>
-
-        <div className="mx-auto w-full max-w-3xl space-y-6">
-          <AuthRequiredDialog
-            open={authDialogOpen}
-            onOpenChange={setAuthDialogOpen}
-            actionLabel="publish"
-            onPrepareSignIn={prepareSignIn}
-          />
-
-          {deploymentStatus !== "IDLE" ? (
-            <DeploymentStatusCard
-              status={deploymentStatus}
-              liveUrl={liveUrl}
-              error={deploymentError}
-              onDismiss={resetDeployment}
-            />
-          ) : null}
-
-          <UrlInputForm
+    <div className="relative isolate flex min-h-screen flex-col antialiased">
+      {!isHeroView ? <BuilderFloatingBubbles /> : null}
+      <BuilderAmbientBackground variant={backgroundVariant} />
+      <div className="relative z-10 flex min-h-screen flex-1 flex-col">
+        <header className="shrink-0">
+          <DashboardHeader
             websiteData={websiteData}
-            onWebsiteDataChange={handleWebsiteDataChange}
-            onSiteIdChange={setActiveSiteId}
-            siteId={activeSiteId}
+            isPublishing={isPublishing}
+            isSaving={isSaving}
             user={user}
+            onPublish={handlePublish}
+            onSave={handleSave}
             onPrepareSignIn={prepareSignIn}
           />
-        </div>
+        </header>
+
+        <main
+          className={cn(
+            "min-h-0 w-full flex-1",
+            isHeroView
+              ? "relative flex flex-1 flex-col overflow-hidden"
+              : "flex min-h-0 flex-1 flex-col overflow-y-auto",
+          )}
+        >
+          <div
+            className={cn(
+              "mx-auto flex w-full flex-col px-6",
+              isImmersive
+                ? "max-w-full gap-y-6 py-4"
+                : isHeroView
+                  ? "max-w-7xl min-h-0 w-full flex-1"
+                  : "max-w-7xl flex min-h-full flex-1 flex-col gap-y-6 py-6 md:py-8",
+            )}
+          >
+            <div
+              className={cn(
+                "flex w-full flex-col",
+                isImmersive
+                  ? "min-h-0 flex-1 gap-y-6"
+                  : isHeroView
+                    ? "flex min-h-0 w-full flex-1 flex-col"
+                    : "flex min-h-0 w-full flex-1 flex-col gap-y-6",
+              )}
+            >
+              <AuthRequiredDialog
+                open={authDialogOpen}
+                onOpenChange={setAuthDialogOpen}
+                actionLabel="publish"
+                onPrepareSignIn={prepareSignIn}
+              />
+
+              {deploymentStatus !== "IDLE" ? (
+                <DeploymentStatusCard
+                  status={deploymentStatus}
+                  liveUrl={liveUrl}
+                  error={deploymentError}
+                  onDismiss={resetDeployment}
+                />
+              ) : null}
+
+              <UrlInputForm
+                websiteData={websiteData}
+                onWebsiteDataChange={handleWebsiteDataChange}
+                onSiteIdChange={setActiveSiteId}
+                siteId={activeSiteId}
+                user={user}
+                onPrepareSignIn={prepareSignIn}
+                initialSeoData={initialSeoData}
+                initialSourceUrl={initialSourceUrl}
+                initialWorkspaceCommitted={initialWorkspaceCommitted}
+                onCommitWorkspace={handleCommitWorkspace}
+                onAbandonVolatileSession={handleAbandonVolatileSession}
+                onStepChange={setBuilderStep}
+                onAuditViewChange={setAuditView}
+                onBackgroundVariantChange={setBackgroundVariant}
+                onResetProject={handleResetProject}
+              />
+            </div>
+          </div>
+        </main>
+
+        {showMarketingFooter ? (
+          <footer className="mt-auto shrink-0 border-t border-slate-200 py-8 dark:border-slate-800">
+            <MarketingFooter />
+          </footer>
+        ) : null}
       </div>
-    </>
+    </div>
   );
 }

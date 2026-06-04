@@ -9,6 +9,8 @@ export type GuestDraft = {
   website: Website;
   seoData?: SeoAuditResult | null;
   sourceUrl?: string;
+  /** Set when the user enters the AI Editor workspace (committed draft). */
+  workspaceCommitted?: boolean;
   updatedAt: string;
 };
 
@@ -46,7 +48,7 @@ export function clearGuestDraft(): void {
 
 export function updateGuestDraftWebsite(website: Website): void {
   const existing = loadGuestDraft();
-  if (!existing) {
+  if (!existing?.workspaceCommitted) {
     return;
   }
   saveGuestDraft({
@@ -55,5 +57,6 @@ export function updateGuestDraftWebsite(website: Website): void {
     website,
     seoData: existing.seoData,
     sourceUrl: existing.sourceUrl,
+    workspaceCommitted: true,
   });
 }

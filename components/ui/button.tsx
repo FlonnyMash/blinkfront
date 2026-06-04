@@ -46,12 +46,14 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  disabled,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  const isDisabled = disabled === true
 
   return (
     <Comp
@@ -60,6 +62,7 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
+      {...(isDisabled ? { disabled: true } : {})}
     />
   )
 }

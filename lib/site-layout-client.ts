@@ -4,11 +4,157 @@ import {
   saveGuestDraft,
   type GuestDraft,
 } from "@/lib/guest-draft";
+import type { SeoAuditResult } from "@/lib/validations/seo-audit-result";
 import type { Website } from "@/types/layout";
 
 const PENDING_DRAFT_STORAGE_KEY = "blinkfront:pendingDraft";
+const VOLATILE_DRAFT_STORAGE_KEY = "blinkfront:volatileDraft";
+/** In-tab flag while generation / ready is uncommitted. */
+export const VOLATILE_SESSION_KEY = "blinkfront:volatileSession";
+const SKIP_SITE_ID_HYDRATION_KEY = "blinkfront:skipSiteIdHydration";
+
+export type VolatileBuilderStep = "generating" | "ready";
+
+export type VolatileBuilderDraft = {
+  step: VolatileBuilderStep;
+  sourceUrl: string;
+  seoData: SeoAuditResult | null;
+  scrapeAudit?: {
+    url: string;
+    meta: { title: string | null; description: string | null };
+    headings: { h1: string[]; h2: string[] };
+    wordCount: number;
+    rawContent: string;
+  } | null;
+  website?: Website;
+  siteId?: string | null;
+  guestId?: string;
+  updatedAt: string;
+};
 
 export type PendingDraft = GuestDraft;
+
+export function isCommittedDraft(
+  draft: PendingDraft | null | undefined,
+): draft is PendingDraft & { workspaceCommitted: true } {
+  return Boolean(draft?.workspaceCommitted);
+}
+
+export function loadCommittedPendingDraft(): PendingDraft | null {
+  const draft = loadPendingDraft() ?? loadGuestDraft();
+  return isCommittedDraft(draft) ? draft : null;
+}
+
+export function clearUncommittedDrafts(): void {
+  const pending = loadPendingDraft();
+  if (pending && !pending.workspaceCommitted) {
+    clearPendingDraft();
+  }
+  const guest = loadGuestDraft();
+  if (guest && !guest.workspaceCommitted) {
+    clearGuestDraft();
+  }
+}
+
+export function setVolatileBuilderSession(): void {
+  try {
+    sessionStorage.setItem(VOLATILE_SESSION_KEY, "1");
+  } catch {
+    // sessionStorage unavailable
+  }
+}
+
+export function clearVolatileBuilderSession(): void {
+  try {
+    sessionStorage.removeItem(VOLATILE_SESSION_KEY);
+    sessionStorage.removeItem("blinkfront:volatileGeneration");
+  } catch {
+    // ignore
+  }
+}
+
+export function hasVolatileBuilderSession(): boolean {
+  try {
+    return sessionStorage.getItem(VOLATILE_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function saveVolatileDraft(
+  draft: Omit<VolatileBuilderDraft, "updatedAt">,
+): void {
+  try {
+    const payload: VolatileBuilderDraft = {
+      ...draft,
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(VOLATILE_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+    setVolatileBuilderSession();
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+export function loadVolatileDraft(): VolatileBuilderDraft | null {
+  try {
+    const raw = localStorage.getItem(VOLATILE_DRAFT_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw) as VolatileBuilderDraft;
+  } catch {
+    return null;
+  }
+}
+
+export function clearVolatileDraft(): void {
+  try {
+    localStorage.removeItem(VOLATILE_DRAFT_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function hasResumableVolatileSession(): boolean {
+  const draft = loadVolatileDraft();
+  if (!draft) {
+    return false;
+  }
+  if (draft.step === "ready") {
+    return Boolean(draft.website);
+  }
+  return Boolean(draft.seoData && draft.scrapeAudit);
+}
+
+/** Returns the stored volatile draft for resume (does not clear storage). */
+export function hydrateVolatileSession(): VolatileBuilderDraft | null {
+  return loadVolatileDraft();
+}
+
+/** Clears in-progress generation state after the user declines resume or starts over. */
+export function discardVolatileBuilderSession(): void {
+  clearVolatileDraft();
+  clearUncommittedDrafts();
+  clearVolatileBuilderSession();
+  try {
+    sessionStorage.setItem(SKIP_SITE_ID_HYDRATION_KEY, "1");
+  } catch {
+    // sessionStorage unavailable
+  }
+}
+
+export function consumeSkipSiteIdHydration(): boolean {
+  try {
+    if (sessionStorage.getItem(SKIP_SITE_ID_HYDRATION_KEY) === "1") {
+      sessionStorage.removeItem(SKIP_SITE_ID_HYDRATION_KEY);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
 
 type SaveLayoutResponse =
   | { success: true; siteId: string }
@@ -59,7 +205,11 @@ export function clearPendingDraft(): void {
 export function bridgeGuestDraftToPending(): PendingDraft | null {
   const guestDraft = loadGuestDraft();
   if (!guestDraft) {
-    return loadPendingDraft();
+    return loadCommittedPendingDraft();
+  }
+
+  if (!isCommittedDraft(guestDraft)) {
+    return loadCommittedPendingDraft();
   }
 
   savePendingDraft({
@@ -68,9 +218,34 @@ export function bridgeGuestDraftToPending(): PendingDraft | null {
     website: guestDraft.website,
     seoData: guestDraft.seoData,
     sourceUrl: guestDraft.sourceUrl,
+    workspaceCommitted: true,
   });
 
   return loadPendingDraft();
+}
+
+/** Persists draft to local storage only after the user enters the AI Editor. */
+export function commitPendingDraftFromBuilder(input: {
+  siteId: string;
+  website: Website;
+  seoData?: SeoAuditResult | null;
+  sourceUrl?: string;
+  guestId?: string;
+}): void {
+  const draft = {
+    siteId: input.siteId,
+    guestId: input.guestId,
+    website: input.website,
+    seoData: input.seoData,
+    sourceUrl: input.sourceUrl,
+    workspaceCommitted: true as const,
+  };
+
+  clearVolatileDraft();
+  clearVolatileBuilderSession();
+
+  saveGuestDraft(draft);
+  savePendingDraft(draft);
 }
 
 export function savePendingDraftFromBuilder(input: {
@@ -82,13 +257,18 @@ export function savePendingDraftFromBuilder(input: {
     return;
   }
 
-  const existing = loadGuestDraft();
+  const existing = loadCommittedPendingDraft();
+  if (!existing) {
+    return;
+  }
+
   const draft = {
     siteId: input.siteId,
-    guestId: existing?.guestId,
+    guestId: existing.guestId,
     website: input.website,
-    seoData: existing?.seoData,
-    sourceUrl: existing?.sourceUrl,
+    seoData: existing.seoData,
+    sourceUrl: existing.sourceUrl,
+    workspaceCommitted: true as const,
   };
 
   saveGuestDraft(draft);
@@ -98,7 +278,7 @@ export function savePendingDraftFromBuilder(input: {
 export async function syncPendingDraftAfterAuth(options?: {
   claimedSiteId?: string;
 }): Promise<SyncPendingDraftResult> {
-  const pendingDraft = loadPendingDraft() ?? loadGuestDraft();
+  const pendingDraft = loadCommittedPendingDraft();
   if (!pendingDraft) {
     return { success: true };
   }

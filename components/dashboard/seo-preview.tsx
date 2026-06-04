@@ -1,6 +1,5 @@
 "use client";
 
-import { useId } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -16,6 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { SeoOptimizeCta } from "@/components/dashboard/seo-optimize-cta";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -27,12 +27,20 @@ import type { SessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import type { SeoAuditCheck, SeoAuditResult } from "@/lib/validations/seo-audit-result";
 
+type SeoPreviewVariant = "default" | "compact";
+
 type SeoPreviewProps = {
   seoData: SeoAuditResult | null;
   isAuditing?: boolean;
+  isScraping?: boolean;
   isGenerating?: boolean;
+  pulseGrid?: boolean;
+  variant?: SeoPreviewVariant;
   user?: SessionUser | null;
   onPrepareSignIn?: () => void;
+  showOptimizeCta?: boolean;
+  onOptimizeWithAI?: () => void;
+  className?: string;
 };
 
 type AuditCategoryKey = keyof Pick<
@@ -120,40 +128,307 @@ function filterCategoryChecks(
   return checks.filter(({ key }) => key !== "imagesWithAlt");
 }
 
-function compactCheckValue(check: SeoAuditCheck): string {
-  if (check.value?.trim()) {
-    const value = check.value.trim();
-    if (/^\d+$/.test(value)) {
-      const count = Number(value);
-      return count === 1 ? "1 found" : `${count} found`;
-    }
-    if (value.length > 28) {
-      return `${value.slice(0, 25)}…`;
-    }
-    return value;
+type StatusTone = "success" | "warning" | "error" | "neutral";
+
+type StatusDisplay = {
+  label: string;
+  tone: StatusTone;
+};
+
+const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
+  success:
+    "border-emerald-100 bg-emerald-50 text-emerald-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-500",
+  warning:
+    "border-rose-100 bg-rose-50 text-rose-600 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-500",
+  error:
+    "border-rose-100 bg-rose-50 text-rose-600 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-500",
+  neutral:
+    "border-slate-200/80 bg-slate-100/50 text-slate-500 dark:border-slate-800/50 dark:bg-slate-800/50 dark:text-slate-400",
+};
+
+const CATEGORY_CARD_SURFACE_CLASS =
+  "rounded-2xl border border-slate-200/50 bg-white/60 shadow-sm backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-950/60";
+
+const AI_FIX_EXPLANATIONS: Record<string, string> = {
+  title:
+    "We generate a clear, keyword-aware page title from your main headline so search results show a compelling link.",
+  description:
+    "We write a concise meta description tailored to your page so search snippets accurately preview your offer.",
+  openGraph:
+    "We add Open Graph tags (title, description, image) so shared links render rich previews on social platforms.",
+  canonical:
+    "We set a canonical URL in the generated layout to help search engines index the preferred page version.",
+  h1Count:
+    "We structure the layout with one primary headline so visitors and search engines know what the page is about.",
+  headingOrderValid:
+    "We organize headings in a logical hierarchy (H1 → H2 → H3) for readability and assistive technology.",
+  semanticTagsUsed:
+    "We use semantic landmarks like header, main, and footer so the page structure is clear to browsers and crawlers.",
+  missingAltCount:
+    "We add descriptive alt text to every image in the generated layout for accessibility and image search.",
+  imagesWithAlt:
+    "We ensure all images in the generated layout include meaningful alt text.",
+  totalImages: "Images are included with proper alt attributes where visuals support your message.",
+  totalLinks: "Links are wired with descriptive anchor text in the generated layout.",
+  descriptiveTextCount:
+    "We replace generic anchors like \"click here\" with link text that describes the destination.",
+  brokenLinksCount:
+    "We validate internal links in the generated site and route users to working destinations.",
+};
+
+function getScoreGaugeColor(score: number): string {
+  if (score >= 90) {
+    return "#22c55e";
   }
-  return check.passed ? "OK" : "Not detected";
+  if (score >= 50) {
+    return "#f97316";
+  }
+  return "#ef4444";
 }
 
-function SeoScoreGauge({ score }: { score: number }) {
-  const gradientId = useId();
+function parseNumericValue(value: string | null | undefined): number | null {
+  if (!value?.trim()) {
+    return null;
+  }
+  const match = value.trim().match(/^(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function isMissingMetaValue(value: string | null | undefined): boolean {
+  if (!value?.trim()) {
+    return true;
+  }
+  const normalized = value.toLowerCase();
+  return (
+    normalized.includes("empty") ||
+    normalized.includes("not set") ||
+    normalized.includes("missing")
+  );
+}
+
+function getStatusDisplay(checkKey: string, check: SeoAuditCheck): StatusDisplay {
+  const value = check.value?.trim() ?? "";
+  const numeric = parseNumericValue(value);
+
+  if (check.passed) {
+    switch (checkKey) {
+      case "title":
+      case "description":
+      case "canonical":
+        return { label: "Configured", tone: "success" };
+      case "openGraph":
+        return { label: "Complete", tone: "success" };
+      case "h1Count":
+        return { label: numeric === 1 ? "1 found" : "OK", tone: "success" };
+      case "headingOrderValid":
+        return { label: "Valid", tone: "success" };
+      case "semanticTagsUsed":
+        return { label: "In use", tone: "success" };
+      case "missingAltCount":
+        return { label: numeric === 0 ? "None missing" : "OK", tone: "success" };
+      case "imagesWithAlt":
+        return { label: "All covered", tone: "success" };
+      case "totalImages":
+      case "totalLinks":
+      case "descriptiveTextCount":
+        return {
+          label: numeric === 1 ? "1 found" : numeric !== null ? `${numeric} found` : "OK",
+          tone: "success",
+        };
+      case "brokenLinksCount":
+        return { label: "None found", tone: "success" };
+      default:
+        return { label: "OK", tone: "success" };
+    }
+  }
+
+  switch (checkKey) {
+    case "title":
+      return isMissingMetaValue(value)
+        ? { label: "Missing", tone: "error" }
+        : { label: "Needs work", tone: "warning" };
+    case "description":
+      return isMissingMetaValue(value)
+        ? { label: "Not configured", tone: "warning" }
+        : { label: "Needs work", tone: "warning" };
+    case "openGraph":
+      return { label: "Missing tags", tone: "error" };
+    case "canonical":
+      return { label: "Missing", tone: "warning" };
+    case "h1Count":
+      if (numeric === 0) {
+        return { label: "Missing", tone: "error" };
+      }
+      if (numeric !== null && numeric > 1) {
+        return { label: `${numeric} found`, tone: "warning" };
+      }
+      return { label: "Needs work", tone: "warning" };
+    case "headingOrderValid":
+      return { label: "Out of order", tone: "warning" };
+    case "semanticTagsUsed":
+      return { label: "Incomplete", tone: "warning" };
+    case "missingAltCount":
+      return {
+        label: numeric === 1 ? "1 missing" : `${numeric ?? 0} missing`,
+        tone: "error",
+      };
+    case "imagesWithAlt":
+      return { label: "Incomplete", tone: "warning" };
+    case "descriptiveTextCount":
+      return { label: "Needs improvement", tone: "warning" };
+    case "brokenLinksCount": {
+      const broken = parseNumericValue(value.split(" ")[0] ?? value);
+      return {
+        label: broken === 1 ? "1 broken" : `${broken ?? 0} broken`,
+        tone: "error",
+      };
+    }
+    default:
+      return { label: "Needs attention", tone: "warning" };
+  }
+}
+
+function getFoundDescription(checkKey: string, check: SeoAuditCheck): string {
+  const value = check.value?.trim() ?? "";
+
+  switch (checkKey) {
+    case "title":
+      if (value.includes("Empty")) {
+        return value.includes("H1:")
+          ? "No page title was set, but we detected a main heading on the scraped page."
+          : "No page title was found — search engines rely on this for result headlines.";
+      }
+      return "The page title is outside the recommended length for search results.";
+    case "description":
+      return isMissingMetaValue(value)
+        ? "No meta description was found — search snippets may pull random page text instead."
+        : "The meta description is too short or too long for optimal search snippets.";
+    case "openGraph":
+      return "Social sharing tags are incomplete, so link previews may look broken or generic.";
+    case "canonical":
+      return "No canonical URL was set, which can confuse search engines when duplicate URLs exist.";
+    case "h1Count": {
+      const count = parseNumericValue(value) ?? 0;
+      if (count === 0) {
+        return "No primary headline (H1) was found on the page.";
+      }
+      return `Multiple primary headlines (${count}) were found — one clear H1 works best.`;
+    }
+    case "headingOrderValid":
+      return "Heading levels skip steps (for example, jumping from H2 to H4), which hurts readability.";
+    case "semanticTagsUsed":
+      return "The page is missing semantic HTML landmarks that help structure content for crawlers.";
+    case "missingAltCount": {
+      const missing = parseNumericValue(value) ?? 0;
+      return `${missing} image${missing === 1 ? "" : "s"} on the scraped page lack descriptive alt text.`;
+    }
+    case "imagesWithAlt":
+      return "Some images on the scraped page are missing alt text.";
+    case "descriptiveTextCount":
+      return "Several links use generic anchor text instead of describing where they lead.";
+    case "brokenLinksCount":
+      return value.includes("broken")
+        ? "Some same-origin links on the scraped page return errors."
+        : "Link health could not be fully verified on the scraped page.";
+    default:
+      return check.remediation;
+  }
+}
+
+function getAiAutoFixExplanation(checkKey: string): string {
+  return (
+    AI_FIX_EXPLANATIONS[checkKey] ??
+    "We apply SEO best practices automatically while generating your new layout."
+  );
+}
+
+function formatTechnicalDetails(check: SeoAuditCheck): string | null {
+  const value = check.value?.trim();
+  if (!value) {
+    return null;
+  }
+  return value;
+}
+
+function StatusBadge({ label, tone }: StatusDisplay) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "shrink-0 whitespace-nowrap px-1.5 py-0 text-[10px] font-medium shadow-none",
+        STATUS_TONE_CLASSES[tone],
+      )}
+    >
+      {label}
+    </Badge>
+  );
+}
+
+function AuditRowLabel({
+  passed,
+  label,
+}: {
+  passed: boolean;
+  label: string;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <StatusIcon passed={passed} />
+      <span className="min-w-0 truncate text-xs font-semibold">{label}</span>
+    </div>
+  );
+}
+
+function AuditRowStatusCluster({
+  status,
+  showAiFixing = false,
+  alignEnd = true,
+}: {
+  status: StatusDisplay;
+  showAiFixing?: boolean;
+  /** When false, status sits beside the trailing chevron (accordion rows). */
+  alignEnd?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center gap-3",
+        alignEnd && "ml-auto",
+      )}
+    >
+      {showAiFixing ? <AiFixingBadge /> : null}
+      <StatusBadge {...status} />
+    </div>
+  );
+}
+
+/** Matches accordion chevron width so passed rows align with failed rows. */
+const CHEVRON_SLOT_CLASS = "size-3 shrink-0";
+
+function SeoScoreGauge({
+  score,
+  size = "default",
+}: {
+  score: number;
+  size?: SeoPreviewVariant;
+}) {
+  const isCompact = size === "compact";
+  const strokeColor = getScoreGaugeColor(score);
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const progress = (score / 100) * circumference;
+  const gaugeSize = isCompact ? "size-20" : "size-28";
+  const scoreText = isCompact ? "text-2xl" : "text-3xl";
 
   return (
     <div
-      className="relative flex size-28 shrink-0 items-center justify-center"
+      className={cn(
+        "relative flex shrink-0 items-center justify-center",
+        gaugeSize,
+      )}
       aria-label={`SEO score ${score} out of 100`}
     >
-      <svg className="-rotate-90 size-28" viewBox="0 0 100 100" aria-hidden>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ef4444" />
-            <stop offset="50%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#22c55e" />
-          </linearGradient>
-        </defs>
+      <svg className={cn("-rotate-90", gaugeSize)} viewBox="0 0 100 100" aria-hidden>
         <circle
           cx="50"
           cy="50"
@@ -167,16 +442,22 @@ function SeoScoreGauge({ score }: { score: number }) {
           cy="50"
           r={radius}
           fill="none"
-          stroke={`url(#${gradientId})`}
+          stroke={strokeColor}
           strokeWidth="7"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference - progress}
-          className="transition-[stroke-dashoffset] duration-700 ease-out"
+          className="transition-[stroke-dashoffset,stroke] duration-700 ease-out"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-semibold tracking-tight tabular-nums text-foreground">
+        <span
+          className={cn(
+            "font-semibold tracking-tight tabular-nums",
+            scoreText,
+          )}
+          style={{ color: strokeColor }}
+        >
           {score}
         </span>
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -191,7 +472,7 @@ function AiFixingBadge() {
   return (
     <Badge
       variant="outline"
-      className="animate-pulse border-purple-200 bg-purple-50 px-1.5 py-0 text-[10px] font-medium text-purple-700 dark:border-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
+      className="shrink-0 animate-pulse whitespace-nowrap border-purple-200 bg-purple-50 px-1.5 py-0 text-[10px] font-medium text-purple-700 dark:border-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
     >
       ✨ AI Fixing…
     </Badge>
@@ -217,24 +498,22 @@ function StatusIcon({ passed }: { passed: boolean }) {
 
 function PassedCheckRow({
   label,
+  checkKey,
   check,
 }: {
   label: string;
+  checkKey: string;
   check: SeoAuditCheck;
 }) {
+  const status = getStatusDisplay(checkKey, check);
+
   return (
-    <div className="flex min-h-8 items-center gap-2 py-0.5">
-      <StatusIcon passed />
-      <span className="min-w-0 flex-1 truncate text-xs font-semibold">
-        {label}
-      </span>
-      <Badge
-        variant="outline"
-        className="max-w-[45%] shrink-0 truncate px-1.5 py-0 text-[10px] font-normal"
-        title={check.value ?? undefined}
-      >
-        {compactCheckValue(check)}
-      </Badge>
+    <div className="flex w-full min-h-8 items-center gap-3 py-0.5">
+      <AuditRowLabel passed label={label} />
+      <div className="ml-auto flex shrink-0 items-center gap-3">
+        <AuditRowStatusCluster status={status} alignEnd={false} />
+        <span className={CHEVRON_SLOT_CLASS} aria-hidden="true" />
+      </div>
     </div>
   );
 }
@@ -242,35 +521,55 @@ function PassedCheckRow({
 function FailedCheckRow({
   rowId,
   label,
+  checkKey,
   check,
   showAiFixing,
 }: {
   rowId: string;
   label: string;
+  checkKey: string;
   check: SeoAuditCheck;
   showAiFixing: boolean;
 }) {
+  const status = getStatusDisplay(checkKey, check);
+  const technicalDetails = formatTechnicalDetails(check);
+
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value={rowId} className="border-0">
-        <AccordionTrigger className="flex min-h-8 items-center gap-2 py-0.5 hover:no-underline **:data-[slot=accordion-trigger-icon]:size-3 **:data-[slot=accordion-trigger-icon]:text-muted-foreground/60">
-          <StatusIcon passed={false} />
-          <span className="min-w-0 flex-1 truncate text-left text-xs font-semibold">
-            {label}
-          </span>
-          <Badge
-            variant="outline"
-            className="max-w-[40%] shrink-0 truncate px-1.5 py-0 text-[10px] font-normal"
-            title={check.value ?? undefined}
-          >
-            {compactCheckValue(check)}
-          </Badge>
-          {showAiFixing ? <AiFixingBadge /> : null}
+        <AccordionTrigger className="flex w-full min-h-8 items-center justify-start gap-3 py-0.5 hover:no-underline **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-3 **:data-[slot=accordion-trigger-icon]:shrink-0 **:data-[slot=accordion-trigger-icon]:text-muted-foreground/60">
+          <AuditRowLabel passed={false} label={label} />
+          <AuditRowStatusCluster
+            status={status}
+            showAiFixing={showAiFixing}
+            alignEnd={false}
+          />
         </AccordionTrigger>
-        <AccordionContent className="pb-1 pl-5">
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {check.remediation}
-          </p>
+        <AccordionContent className="space-y-2 pb-1 pl-5">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-foreground">What we found:</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {getFoundDescription(checkKey, check)}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-foreground">
+              ✨ AI Auto-Fix applied:
+            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {getAiAutoFixExplanation(checkKey)}
+            </p>
+          </div>
+          {technicalDetails ? (
+            <div className="space-y-1 border-t border-border/40 pt-2">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                Technical details
+              </p>
+              <p className="break-all text-[11px] leading-relaxed text-muted-foreground/90">
+                {technicalDetails}
+              </p>
+            </div>
+          ) : null}
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -280,9 +579,13 @@ function FailedCheckRow({
 function CategoryBentoCard({
   category,
   showAiFixing,
+  pulseGrid = false,
+  compact = false,
 }: {
   category: CategoryViewModel;
   showAiFixing: boolean;
+  pulseGrid?: boolean;
+  compact?: boolean;
 }) {
   const visibleChecks = filterCategoryChecks(category.key, category.checks);
   const visibleFailures = visibleChecks.filter(
@@ -290,34 +593,40 @@ function CategoryBentoCard({
   ).length;
 
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-4 shadow-sm">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold tracking-tight">
+    <div
+      className={cn(
+        CATEGORY_CARD_SURFACE_CLASS,
+        compact ? "p-3.5" : "p-5",
+        pulseGrid && "animate-pulse",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800/50">
+        <h3
+          className={cn(
+            "font-semibold tracking-tight",
+            compact ? "text-xs" : "text-sm",
+          )}
+        >
           {category.label}
         </h3>
         {visibleFailures > 0 ? (
-          <Badge
-            variant="secondary"
-            className="border-0 bg-muted px-1.5 py-0 text-[10px] font-normal text-muted-foreground shadow-none"
-          >
+          <span className="rounded-full bg-slate-100/50 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
             {visibleFailures}{" "}
             {visibleFailures === 1 ? "issue" : "issues"}
-          </Badge>
+          </span>
         ) : (
-          <Badge
-            variant="secondary"
-            className="border-0 bg-emerald-500/10 px-1.5 py-0 text-[10px] font-normal text-emerald-700 shadow-none dark:text-emerald-400"
-          >
+          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-500">
             Passed
-          </Badge>
+          </span>
         )}
       </div>
-      <div className="divide-y divide-border/40">
+      <div className="divide-y divide-slate-100/80 pt-3 dark:divide-slate-800/50">
         {visibleChecks.map(({ key, check }) =>
           check.passed ? (
             <PassedCheckRow
               key={key}
               label={CHECK_LABELS[key] ?? key}
+              checkKey={key}
               check={check}
             />
           ) : (
@@ -325,6 +634,7 @@ function CategoryBentoCard({
               key={key}
               rowId={`${category.key}-${key}`}
               label={CHECK_LABELS[key] ?? key}
+              checkKey={key}
               check={check}
               showAiFixing={showAiFixing}
             />
@@ -335,11 +645,19 @@ function CategoryBentoCard({
   );
 }
 
-function BentoGridSkeleton() {
+function BentoGridSkeleton({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div
+      className={cn(
+        "grid grid-cols-1",
+        compact ? "gap-2" : "gap-3 sm:grid-cols-2",
+      )}
+    >
       {CATEGORY_KEYS.map((key) => (
-        <Skeleton key={key} className="h-36 rounded-xl" />
+        <Skeleton
+          key={key}
+          className={cn("rounded-2xl", compact ? "h-28" : "h-36")}
+        />
       ))}
     </div>
   );
@@ -348,11 +666,18 @@ function BentoGridSkeleton() {
 export function SeoPreview({
   seoData,
   isAuditing = false,
+  isScraping = false,
   isGenerating = false,
+  pulseGrid = false,
+  variant = "default",
   user = null,
   onPrepareSignIn,
+  showOptimizeCta = false,
+  onOptimizeWithAI,
+  className,
 }: SeoPreviewProps) {
   const router = useRouter();
+  const isCompact = variant === "compact";
   const isGuest = user === null;
   const categories = seoData ? buildCategories(seoData) : [];
   const totalIssues = categories.reduce((sum, cat) => {
@@ -361,14 +686,25 @@ export function SeoPreview({
   }, 0);
 
   const showGuestPreviewBar =
-    isGuest && seoData && !isGenerating && !isAuditing;
+    !isCompact && isGuest && seoData && !isGenerating && !isAuditing;
   const showAiFixing = isAuditing || isGenerating;
+  const showGeneratingFooter = !isCompact && isGenerating && seoData;
+  const showOptimizeButton =
+    !isCompact &&
+    Boolean(onOptimizeWithAI) &&
+    seoData !== null &&
+    !isAuditing;
 
   return (
-    <Card className="overflow-hidden shadow-sm">
+    <Card
+      className={cn(
+        "relative gap-0 overflow-hidden rounded-2xl border border-slate-200/50 bg-white/80 py-0 shadow-sm ring-0 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-950/80",
+        className,
+      )}
+    >
       {showGuestPreviewBar ? (
         <div
-          className="flex items-center gap-2 border-b border-border/50 bg-slate-50 px-4 py-2 text-xs text-muted-foreground dark:bg-slate-900/40"
+          className="relative z-10 flex items-center gap-2 border-b border-slate-200/50 bg-white/50 px-5 py-2 text-xs text-muted-foreground backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/40"
           role="status"
         >
           <Sparkles className="size-3.5 shrink-0 opacity-60" aria-hidden />
@@ -389,20 +725,43 @@ export function SeoPreview({
         </div>
       ) : null}
 
-      <CardContent className="space-y-4 pt-4">
-        <div className="flex items-start gap-5">
+      <CardContent
+        className={cn(
+          "relative z-10 space-y-4",
+          isCompact ? "px-3.5 pt-3.5 pb-3.5" : "px-5 pt-5 pb-5",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center",
+            isCompact ? "gap-3" : "gap-5",
+          )}
+        >
           {seoData ? (
-            <SeoScoreGauge score={seoData.overallScore} />
+            <SeoScoreGauge score={seoData.overallScore} size={variant} />
           ) : isAuditing ? (
-            <Skeleton className="size-28 shrink-0 rounded-full" />
+            <Skeleton
+              className={cn(
+                "shrink-0 rounded-full",
+                isCompact ? "size-20" : "size-28",
+              )}
+            />
           ) : null}
 
-          <div className="min-w-0 flex-1 space-y-1 pt-1">
-            <h2 className="text-lg font-semibold tracking-tight">
+          <div className="min-w-0 flex-1 space-y-1">
+            <h2
+              className={cn(
+                "font-semibold tracking-tight",
+                isCompact ? "text-base" : "text-lg",
+              )}
+            >
               SEO Core Vitals Audit
             </h2>
             {seoData ? (
-              <p className="text-xs text-muted-foreground">
+              <p
+                className="text-xs text-muted-foreground"
+                suppressHydrationWarning
+              >
                 Audited{" "}
                 {new Date(seoData.auditedAt).toLocaleString(undefined, {
                   dateStyle: "medium",
@@ -411,34 +770,53 @@ export function SeoPreview({
               </p>
             ) : null}
             <p className="text-sm text-muted-foreground">
-              {isAuditing
-                ? "Analyzing page HTML for meta, structure, images, and links…"
-                : isGenerating
-                  ? "Audit complete — applying fixes to your generated layout."
-                  : seoData
-                    ? buildSummary(seoData.overallScore, totalIssues)
-                    : "Deterministic on-page SEO analysis."}
+              {isScraping && !isAuditing
+                ? "Fetching page content and preparing your SEO audit…"
+                : isAuditing
+                  ? "Analyzing page HTML for meta, structure, images, and links…"
+                  : isGenerating
+                    ? "Audit complete — applying fixes to your generated layout."
+                    : seoData
+                      ? buildSummary(seoData.overallScore, totalIssues)
+                      : "Deterministic on-page SEO analysis."}
             </p>
           </div>
+
+          {showOptimizeButton ? (
+            <SeoOptimizeCta
+              showAuditCta={showOptimizeCta}
+              onOptimizeWithAI={onOptimizeWithAI!}
+              className="shrink-0 self-center"
+            />
+          ) : null}
         </div>
 
-        {isAuditing && !seoData ? (
-          <BentoGridSkeleton />
-        ) : seoData ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {categories.map((category) => (
+        <div
+          className={cn(
+            "grid grid-cols-1",
+            isCompact ? "gap-2" : "gap-3 sm:grid-cols-2",
+            !seoData && isAuditing && "animate-pulse",
+          )}
+          aria-busy={isAuditing && !seoData}
+        >
+          {seoData ? (
+            categories.map((category) => (
               <CategoryBentoCard
                 key={category.key}
                 category={category}
                 showAiFixing={showAiFixing}
+                pulseGrid={pulseGrid}
+                compact={isCompact}
               />
-            ))}
-          </div>
-        ) : null}
+            ))
+          ) : (
+            <BentoGridSkeleton compact={isCompact} />
+          )}
+        </div>
       </CardContent>
 
-      {isGenerating && seoData ? (
-        <CardFooter className="gap-2 border-t border-border/60 bg-muted/30 py-2.5 text-sm text-muted-foreground">
+      {showGeneratingFooter ? (
+        <CardFooter className="relative z-10 gap-2 border-t border-slate-100 bg-muted/30 py-2.5 text-sm text-muted-foreground dark:border-slate-800/50">
           <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
           <span>Generating layout from audit insights…</span>
         </CardFooter>

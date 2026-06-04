@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 import {
   bridgeGuestDraftToPending,
-  loadPendingDraft,
+  loadCommittedPendingDraft,
   syncPendingDraftAfterAuth,
 } from "@/lib/site-layout-client";
 
@@ -33,7 +33,7 @@ export function LoginForm() {
 
   useEffect(() => {
     bridgeGuestDraftToPending();
-    setHasPendingDraft(Boolean(loadPendingDraft()));
+    setHasPendingDraft(Boolean(loadCommittedPendingDraft()));
   }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
