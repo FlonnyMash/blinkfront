@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,16 @@ type SeoAuditApiResponse =
   | { success: true; data: SeoAuditInsights }
   | { success: false; error: string };
 
+const LAST_URL_STORAGE_KEY = "blinkfront:lastUrl";
+
+function readStoredUrl(): string {
+  try {
+    return sessionStorage.getItem(LAST_URL_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 async function readApiError(response: Response, fallback: string): Promise<string> {
   try {
     const body = (await response.json()) as { error?: string };
@@ -45,6 +55,25 @@ export function UrlInputForm({
 }: UrlInputFormProps) {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const stored = readStoredUrl();
+    if (stored) {
+      setUrl(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (url.trim()) {
+        sessionStorage.setItem(LAST_URL_STORAGE_KEY, url);
+      } else {
+        sessionStorage.removeItem(LAST_URL_STORAGE_KEY);
+      }
+    } catch {
+      // sessionStorage unavailable (private mode, quota, etc.)
+    }
+  }, [url]);
   const [isAuditing, setIsAuditing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,9 +86,20 @@ export function UrlInputForm({
 
   const isBusy = isLoading || isAuditing || isGenerating;
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const normalizedUrl = normalizeUrl(url);
+    const formUrl = e.currentTarget.elements.namedItem("url");
+    const rawUrl =
+      formUrl instanceof HTMLInputElement
+        ? formUrl.value
+        : String(new FormData(e.currentTarget).get("url") ?? url);
+    const normalizedUrl = normalizeUrl(rawUrl);
+
+    if (!normalizedUrl) {
+      setError("Please enter a URL");
+      return;
+    }
+
     setUrl(normalizedUrl);
     setIsLoading(true);
     setIsAuditing(false);
@@ -156,10 +196,15 @@ export function UrlInputForm({
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
               type="text"
+              name="url"
               inputMode="url"
+              autoComplete="url"
               placeholder="example.com"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                setError(null);
+              }}
               disabled={isBusy}
               required
             />
