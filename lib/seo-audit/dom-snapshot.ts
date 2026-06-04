@@ -3,12 +3,15 @@ import * as cheerio from "cheerio";
 /** Raw DOM facts from HTML — no scoring (keeps audits deterministic). */
 export type DomSnapshot = {
   meta: {
-    title: string | null;
+    /** Text from the `<title>` element only (empty string if tag exists but blank). */
+    titleTag: string | null;
     description: string | null;
     ogTitle: string | null;
     ogDescription: string | null;
     ogImage: string | null;
     canonical: string | null;
+    /** First H1 text — hint when `<title>` is empty (not a substitute for scoring). */
+    primaryHeading: string | null;
   };
   structure: {
     h1Count: number;
@@ -38,9 +41,16 @@ const GENERIC_LINK_TEXT = new Set([
 type CheerioLoaded = ReturnType<typeof cheerio.load>;
 
 function metaContent($: CheerioLoaded, name: string): string | null {
-  const el = $(`meta[name="${name}"], meta[property="${name}"]`).first();
+  const el = $(
+    `meta[name="${name}"], meta[property="${name}"], meta[name="${name.replace(":", "")}"]`,
+  ).first();
   const content = el.attr("content")?.trim();
   return content || null;
+}
+
+function firstHeadingText($: CheerioLoaded, tag: string): string | null {
+  const text = $(tag).first().text().replace(/\s+/g, " ").trim();
+  return text || null;
 }
 
 function isHeadingOrderValid(levels: number[]): boolean {
@@ -63,10 +73,11 @@ function isHeadingOrderValid(levels: number[]): boolean {
 export function extractDomSnapshotFromHtml(html: string): DomSnapshot {
   const $ = cheerio.load(html);
 
-  const title =
-    $("title").first().text().trim() || metaContent($, "og:title") || null;
+  const titleRaw = $("title").first().text().trim();
+  const titleTag = $("title").length > 0 ? titleRaw : null;
 
   const description = metaContent($, "description");
+  const primaryHeading = firstHeadingText($, "h1");
   const ogTitle = metaContent($, "og:title");
   const ogDescription = metaContent($, "og:description");
   const ogImage = metaContent($, "og:image");
@@ -118,12 +129,13 @@ export function extractDomSnapshotFromHtml(html: string): DomSnapshot {
 
   return {
     meta: {
-      title,
+      titleTag,
       description,
       ogTitle,
       ogDescription,
       ogImage,
       canonical,
+      primaryHeading,
     },
     structure: {
       h1Count: $("h1").length,

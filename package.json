@@ -9,8 +9,9 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev"
+    "db:push": "node scripts/run-prisma.mjs db push",
+    "db:migrate": "node scripts/run-prisma.mjs migrate dev",
+    "db:generate": "node scripts/run-prisma.mjs generate"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.67",

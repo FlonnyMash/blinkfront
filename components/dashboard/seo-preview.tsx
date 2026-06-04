@@ -1,7 +1,13 @@
 "use client";
 
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -21,7 +27,19 @@ type SeoPreviewProps = {
   isGenerating?: boolean;
 };
 
-const CATEGORY_LABELS: Record<keyof Pick<SeoAuditResult, "meta" | "structure" | "images" | "links">, string> = {
+type AuditCategoryKey = keyof Pick<
+  SeoAuditResult,
+  "meta" | "structure" | "images" | "links"
+>;
+
+const CATEGORY_KEYS: AuditCategoryKey[] = [
+  "meta",
+  "structure",
+  "images",
+  "links",
+];
+
+const CATEGORY_LABELS: Record<AuditCategoryKey, string> = {
   meta: "Meta",
   structure: "Structure",
   images: "Images",
@@ -44,109 +62,160 @@ const CHECK_LABELS: Record<string, string> = {
   brokenLinksCount: "Broken links",
 };
 
-function scoreLabel(score: number): string {
-  if (score >= 80) return "Strong";
-  if (score >= 60) return "Fair";
-  if (score >= 40) return "Needs work";
-  return "Critical";
-}
+type CategoryViewModel = {
+  key: AuditCategoryKey;
+  label: string;
+  checks: { key: string; check: SeoAuditCheck }[];
+  failureCount: number;
+};
 
-function scoreColor(score: number): string {
-  if (score >= 80) return "text-emerald-600 dark:text-emerald-400";
-  if (score >= 60) return "text-amber-600 dark:text-amber-400";
-  if (score >= 40) return "text-orange-600 dark:text-orange-400";
-  return "text-red-600 dark:text-red-400";
-}
-
-function scoreRingColor(score: number): string {
-  if (score >= 80) return "stroke-emerald-500";
+function scoreRingStroke(score: number): string {
+  if (score >= 80) return "stroke-emerald-500/80";
   if (score >= 60) return "stroke-amber-500";
-  if (score >= 40) return "stroke-orange-500";
-  return "stroke-red-500";
+  return "stroke-amber-500/70";
+}
+
+function scoreTextColor(score: number): string {
+  if (score >= 80) return "text-foreground";
+  if (score >= 60) return "text-amber-600 dark:text-amber-500";
+  return "text-amber-600 dark:text-amber-500";
+}
+
+function buildSummary(overallScore: number, issueCount: number): string {
+  if (issueCount === 0) {
+    return "All checks passed — on-page fundamentals look solid.";
+  }
+  if (overallScore >= 70) {
+    return `${issueCount} optimization ${issueCount === 1 ? "opportunity" : "opportunities"} to polish before publish.`;
+  }
+  return `${issueCount} ${issueCount === 1 ? "opportunity" : "opportunities"} — expand sections below for AI suggestions.`;
+}
+
+function buildCategories(seoData: SeoAuditResult): CategoryViewModel[] {
+  return CATEGORY_KEYS.map((key) => {
+    const checks = Object.entries(seoData[key]).map(([checkKey, check]) => ({
+      key: checkKey,
+      check: check as SeoAuditCheck,
+    }));
+    const failureCount = checks.filter(({ check }) => !check.passed).length;
+    return {
+      key,
+      label: CATEGORY_LABELS[key],
+      checks,
+      failureCount,
+    };
+  });
 }
 
 function SeoScoreRing({ score }: { score: number }) {
-  const radius = 44;
+  const radius = 36;
   const circumference = 2 * Math.PI * radius;
   const progress = (score / 100) * circumference;
 
   return (
-    <div className="relative flex size-28 shrink-0 items-center justify-center">
-      <svg className="-rotate-90 size-28" viewBox="0 0 100 100" aria-hidden>
+    <div
+      className="relative flex size-20 shrink-0 items-center justify-center"
+      aria-label={`SEO score ${score} out of 100`}
+    >
+      <svg className="-rotate-90 size-20" viewBox="0 0 100 100" aria-hidden>
         <circle
           cx="50"
           cy="50"
           r={radius}
           fill="none"
-          className="stroke-muted"
-          strokeWidth="8"
+          className="stroke-muted/60"
+          strokeWidth="6"
         />
         <circle
           cx="50"
           cy="50"
           r={radius}
           fill="none"
-          className={cn("transition-all duration-700", scoreRingColor(score))}
-          strokeWidth="8"
+          className={cn(
+            "transition-[stroke-dashoffset] duration-500 ease-out",
+            scoreRingStroke(score),
+          )}
+          strokeWidth="6"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference - progress}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn("text-3xl font-bold tabular-nums", scoreColor(score))}>
+        <span
+          className={cn(
+            "text-2xl font-semibold tracking-tight tabular-nums",
+            scoreTextColor(score),
+          )}
+        >
           {score}
         </span>
-        <span className="text-xs text-muted-foreground">SEO Score</span>
       </div>
     </div>
   );
 }
 
-function AuditCheckRow({ label, check }: { label: string; check: SeoAuditCheck }) {
+function StatusIcon({ passed }: { passed: boolean }) {
+  if (passed) {
+    return (
+      <CheckCircle2
+        className="size-4 shrink-0 text-emerald-500/80"
+        aria-hidden
+      />
+    );
+  }
   return (
-    <li className="flex gap-3 rounded-lg border bg-card/50 px-3 py-2 text-sm">
-      {check.passed ? (
-        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
-      ) : (
-        <XCircle className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden />
-      )}
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{label}</span>
-          <Badge variant={check.passed ? "secondary" : "rose"}>
-            {check.score}/100
-          </Badge>
-          {check.value && (
-            <span className="truncate text-xs text-muted-foreground" title={check.value}>
-              {check.value}
-            </span>
-          )}
-        </div>
-        {!check.passed && (
-          <p className="text-xs leading-relaxed text-muted-foreground">{check.remediation}</p>
-        )}
-      </div>
-    </li>
+    <AlertCircle
+      className="size-4 shrink-0 text-amber-500"
+      aria-hidden
+    />
   );
 }
 
-function CategorySection({
-  title,
-  checks,
-}: {
-  title: string;
-  checks: { key: string; check: SeoAuditCheck }[];
-}) {
+/** Avoid duplicate rows when missing-alt already covers the same failure. */
+function filterCategoryChecks(
+  categoryKey: AuditCategoryKey,
+  checks: { key: string; check: SeoAuditCheck }[],
+): { key: string; check: SeoAuditCheck }[] {
+  if (categoryKey !== "images") {
+    return checks;
+  }
+  const missingFailed = checks.some(
+    ({ key, check }) => key === "missingAltCount" && !check.passed,
+  );
+  if (!missingFailed) {
+    return checks;
+  }
+  return checks.filter(({ key }) => key !== "imagesWithAlt");
+}
+
+function AuditCheckRow({ label, check }: { label: string; check: SeoAuditCheck }) {
   return (
-    <section>
-      <h3 className="mb-2 text-sm font-medium">{title}</h3>
-      <ul className="space-y-2">
-        {checks.map(({ key, check }) => (
-          <AuditCheckRow key={key} label={CHECK_LABELS[key] ?? key} check={check} />
-        ))}
-      </ul>
-    </section>
+    <li className="py-3 first:pt-0 last:pb-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <StatusIcon passed={check.passed} />
+          <span className="text-sm font-medium leading-snug">{label}</span>
+        </div>
+        <span
+          className="max-w-[50%] shrink-0 truncate text-right text-xs text-muted-foreground"
+          title={check.value ?? undefined}
+        >
+          {check.value ?? (check.passed ? "OK" : "Not detected")}
+        </span>
+      </div>
+      {!check.passed && (
+        <div className="ml-[28px] mt-1 flex gap-2 border-l-2 border-amber-400/50 pl-3">
+          <Sparkles
+            className="mt-0.5 size-3.5 shrink-0 text-amber-500/70"
+            aria-hidden
+          />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {check.remediation}
+          </p>
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -155,74 +224,119 @@ export function SeoPreview({
   isAuditing = false,
   isGenerating = false,
 }: SeoPreviewProps) {
+  const categories = seoData ? buildCategories(seoData) : [];
+  const totalIssues = categories.reduce((sum, cat) => {
+    const checks = filterCategoryChecks(
+      cat.key,
+      cat.checks,
+    );
+    return sum + checks.filter(({ check }) => !check.passed).length;
+  }, 0);
+  const openCategories = categories
+    .filter((cat) => {
+      const checks = filterCategoryChecks(cat.key, cat.checks);
+      return checks.some(({ check }) => !check.passed);
+    })
+    .map((cat) => cat.key);
+
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-card to-muted/30">
-      <CardHeader className="border-b pb-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle>SEO Audit Report</CardTitle>
-            <CardDescription className="mt-1">
-              {isAuditing
-                ? "Running deterministic on-page checks from the page HTML..."
-                : isGenerating
-                  ? "Audit complete — generating an optimized layout from these results."
-                  : "Deterministic meta, structure, image, and link analysis."}
-            </CardDescription>
-          </div>
-          {seoData && <SeoScoreRing score={seoData.overallScore} />}
-          {isAuditing && !seoData && (
-            <Skeleton className="size-28 shrink-0 rounded-full" />
-          )}
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-6 pb-2">
+        <div className="min-w-0 space-y-1">
+          <CardTitle>SEO audit</CardTitle>
+          <CardDescription>
+            {isAuditing
+              ? "Analyzing page HTML for meta, structure, images, and links…"
+              : isGenerating
+                ? "Audit complete — applying fixes to your generated layout."
+                : seoData
+                  ? buildSummary(seoData.overallScore, totalIssues)
+                  : "Deterministic on-page SEO analysis."}
+          </CardDescription>
         </div>
+        {seoData && <SeoScoreRing score={seoData.overallScore} />}
+        {isAuditing && !seoData && (
+          <Skeleton className="size-20 shrink-0 rounded-full" />
+        )}
       </CardHeader>
 
-      <CardContent className="space-y-6 pt-4">
+      <CardContent className="pt-2">
         {isAuditing && !seoData ? (
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
+          <div className="space-y-3 py-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         ) : seoData ? (
-          <>
-            {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map(
-              (categoryKey) => {
-                const category = seoData[categoryKey];
-                const checks = Object.entries(category).map(([key, check]) => ({
-                  key,
-                  check: check as SeoAuditCheck,
-                }));
-                return (
-                  <CategorySection
-                    key={categoryKey}
-                    title={CATEGORY_LABELS[categoryKey]}
-                    checks={checks}
-                  />
-                );
-              },
-            )}
+          <Accordion
+            type="multiple"
+            defaultValue={openCategories}
+            className="w-full"
+          >
+            {categories.map((category) => {
+              const visibleChecks = filterCategoryChecks(
+                category.key,
+                category.checks,
+              );
+              const visibleFailures = visibleChecks.filter(
+                ({ check }) => !check.passed,
+              ).length;
 
-            <p className="text-xs text-muted-foreground">
-              Score rating:{" "}
-              <span className={cn("font-medium", scoreColor(seoData.overallScore))}>
-                {scoreLabel(seoData.overallScore)}
-              </span>
-              {" · "}
-              Audited {new Date(seoData.auditedAt).toLocaleString()}
-            </p>
-          </>
+              return (
+              <AccordionItem
+                key={category.key}
+                value={category.key}
+                className="border-border/60"
+              >
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <span className="flex flex-1 items-center gap-2 pr-2">
+                    <span>{category.label}</span>
+                    {visibleFailures > 0 ? (
+                      <Badge
+                        variant="secondary"
+                        className="border-0 bg-muted font-normal text-muted-foreground shadow-none"
+                      >
+                        {visibleFailures}{" "}
+                        {visibleFailures === 1 ? "suggestion" : "suggestions"}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className="border-0 bg-muted/60 font-normal text-muted-foreground shadow-none"
+                      >
+                        Passed
+                      </Badge>
+                    )}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-3">
+                  <ul className="divide-y divide-border">
+                    {visibleChecks.map(({ key, check }) => (
+                      <AuditCheckRow
+                        key={key}
+                        label={CHECK_LABELS[key] ?? key}
+                        check={check}
+                      />
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            );
+            })}
+          </Accordion>
         ) : null}
+
+        {seoData && (
+          <p className="mt-4 text-xs text-muted-foreground">
+            Audited {new Date(seoData.auditedAt).toLocaleString()}
+          </p>
+        )}
       </CardContent>
 
       {isGenerating && seoData && (
-        <CardFooter className="border-t bg-primary/5">
-          <div className="flex items-center gap-2 text-sm text-primary">
-            <Loader2 className="size-4 animate-spin" />
-            <span>
-              Applying audit insights to generate your AI-optimized website layout...
-            </span>
-          </div>
+        <CardFooter className="gap-2 border-t border-border/60 bg-muted/30 py-3 text-sm text-muted-foreground">
+          <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+          <span>Generating layout from audit insights…</span>
         </CardFooter>
       )}
     </Card>

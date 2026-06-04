@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
+import { LeadForm } from "@/components/ui/lead-form";
 import { cn } from "@/lib/utils";
 import type { HeroContent, HeroVariant } from "@/types/layout";
 
 type HeroBlockProps = {
   content: HeroContent;
+  siteId?: string;
 };
 
 const sectionShellByVariant: Record<HeroVariant, string> = {
@@ -26,9 +28,11 @@ const innerByVariant: Record<HeroVariant, string> = {
 function HeroCopy({
   content,
   variant,
+  siteId,
 }: {
   content: HeroContent;
   variant: HeroVariant;
+  siteId?: string;
 }) {
   const headlineClass =
     variant === "centered"
@@ -48,20 +52,29 @@ function HeroCopy({
       >
         {content.subheadline}
       </p>
-      <Button
-        size="lg"
-        className={cn(
-          "bg-[var(--primary)] text-[var(--background)] hover:bg-[var(--primary)]/90",
-          variant === "centered" && "px-10 text-base",
-        )}
-      >
-        {content.ctaText}
-      </Button>
+      {siteId ? (
+        <LeadForm
+          siteId={siteId}
+          buttonText={content.ctaText}
+          layout="hero"
+          className={variant === "centered" ? "sm:justify-center" : undefined}
+        />
+      ) : (
+        <Button
+          size="lg"
+          className={cn(
+            "bg-[var(--primary)] text-[var(--background)] hover:bg-[var(--primary)]/90",
+            variant === "centered" && "px-10 text-base",
+          )}
+        >
+          {content.ctaText}
+        </Button>
+      )}
     </>
   );
 }
 
-export function HeroBlock({ content }: HeroBlockProps) {
+export function HeroBlock({ content, siteId }: HeroBlockProps) {
   const variant = content.variant ?? "centered";
 
   return (
@@ -78,7 +91,7 @@ export function HeroBlock({ content }: HeroBlockProps) {
         {variant === "split" ? (
           <>
             <div className="flex flex-col items-start gap-6">
-              <HeroCopy content={content} variant={variant} />
+              <HeroCopy content={content} variant={variant} siteId={siteId} />
             </div>
             <div
               className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-2xl ring-1 ring-[var(--text)]/10"
@@ -89,7 +102,7 @@ export function HeroBlock({ content }: HeroBlockProps) {
             </div>
           </>
         ) : (
-          <HeroCopy content={content} variant={variant} />
+          <HeroCopy content={content} variant={variant} siteId={siteId} />
         )}
       </div>
     </section>

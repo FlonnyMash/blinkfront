@@ -37,7 +37,7 @@ Benefits only—translate specs into outcomes (e.g. "24/7 cloud sync" → "Acces
 Each item MUST include a semantic \`icon\` — a real \`lucide-react\` name in PascalCase (e.g. Brain, Globe, Lock). Do not invent names; match icon to benefit.
 
 ### Testimonials
-Exactly 3 items; quotes cite concrete results aligned with the UVP.
+Exactly 3 items; quotes cite concrete results aligned with the UVP. Never wrap \`quote\` in quotation marks—the UI renders them.
 
 ### FAQ
 Address conversion anxieties (pricing, migration, security, onboarding, ROI)—not boring generic Q&A. Direct, reassuring answers.

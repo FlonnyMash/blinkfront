@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
+import { LeadForm } from "@/components/ui/lead-form";
 import { cn } from "@/lib/utils";
 import type { CtaContent, CtaVariant } from "@/types/layout";
 
 type CtaBlockProps = {
   content: CtaContent;
+  siteId?: string;
 };
 
 const sectionShellByVariant: Record<CtaVariant, string> = {
@@ -13,7 +15,40 @@ const sectionShellByVariant: Record<CtaVariant, string> = {
   split: "w-full bg-[var(--background)] px-4 py-16 md:py-24",
 };
 
-export function CtaBlock({ content }: CtaBlockProps) {
+function CtaAction({
+  siteId,
+  buttonText,
+  layout,
+}: {
+  siteId?: string;
+  buttonText: string;
+  layout: "cta-default" | "cta-split" | "cta-minimal";
+}) {
+  if (siteId) {
+    return (
+      <LeadForm siteId={siteId} buttonText={buttonText} layout={layout} />
+    );
+  }
+
+  const buttonClass =
+    layout === "cta-minimal"
+      ? "border-2 border-[var(--primary)] px-8 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--background)]"
+      : layout === "cta-split"
+        ? "w-full bg-[var(--background)] px-8 text-lg text-[var(--primary)] hover:bg-[var(--background)]/90 md:w-auto"
+        : "bg-[var(--background)] text-[var(--primary)] hover:bg-[var(--background)]/90";
+
+  return (
+    <Button
+      size="lg"
+      variant={layout === "cta-minimal" ? "outline" : "secondary"}
+      className={buttonClass}
+    >
+      {buttonText}
+    </Button>
+  );
+}
+
+export function CtaBlock({ content, siteId }: CtaBlockProps) {
   const variant = content.variant ?? "split";
 
   if (variant === "minimal") {
@@ -40,13 +75,11 @@ export function CtaBlock({ content }: CtaBlockProps) {
               {content.subheadline}
             </p>
           ) : null}
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-2 border-[var(--primary)] px-8 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--background)]"
-          >
-            {content.buttonText}
-          </Button>
+          <CtaAction
+            siteId={siteId}
+            buttonText={content.buttonText}
+            layout="cta-minimal"
+          />
         </div>
       </section>
     );
@@ -79,13 +112,11 @@ export function CtaBlock({ content }: CtaBlockProps) {
             ) : null}
           </div>
           <div className="flex md:justify-end">
-            <Button
-              size="lg"
-              variant="secondary"
-              className="w-full bg-[var(--background)] px-8 text-lg text-[var(--primary)] hover:bg-[var(--background)]/90 md:w-auto"
-            >
-              {content.buttonText}
-            </Button>
+            <CtaAction
+              siteId={siteId}
+              buttonText={content.buttonText}
+              layout="cta-split"
+            />
           </div>
         </div>
       </section>
@@ -115,13 +146,11 @@ export function CtaBlock({ content }: CtaBlockProps) {
             {content.subheadline}
           </p>
         ) : null}
-        <Button
-          size="lg"
-          variant="secondary"
-          className="bg-[var(--background)] text-[var(--primary)] hover:bg-[var(--background)]/90"
-        >
-          {content.buttonText}
-        </Button>
+        <CtaAction
+          siteId={siteId}
+          buttonText={content.buttonText}
+          layout="cta-default"
+        />
       </div>
     </section>
   );

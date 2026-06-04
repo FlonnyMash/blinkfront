@@ -3,8 +3,11 @@
 @source "../../components/blocks/**/*.tsx";
 @source "../../components/renderer/LayoutRenderer.tsx";
 @source "../../lib/deploy/render-html.tsx";
+@source "../../lib/deploy/publish-layout-renderer.tsx";
 @source "../../components/ui/button.tsx";
 @source "../../components/ui/card.tsx";
+@source "../../components/ui/lead-form-markup.tsx";
+@source "../../components/ui/scroll-reveal.tsx";
 
 :root {
   --background: oklch(1 0 0);
@@ -44,5 +47,19 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .lead-capture-thanks {
+    @apply text-lg font-semibold text-[var(--text)];
+  }
+
+  .lead-capture-error:not([hidden]) {
+    @apply block;
+  }
+
+  form.lead-capture-form[data-lead-success="true"] {
+    @apply justify-center;
   }
 }

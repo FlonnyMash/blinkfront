@@ -13,6 +13,7 @@ type PublishSuccessResponse = {
   url: string;
   deploymentId: string;
   status: "READY" | "BUILDING";
+  siteId?: string;
 };
 
 type PublishFailureResponse = {
@@ -24,6 +25,7 @@ type PublishResponse = PublishSuccessResponse | PublishFailureResponse;
 
 export function DashboardShell() {
   const [websiteData, setWebsiteData] = useState<Website | null>(null);
+  const [publishedSiteId, setPublishedSiteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (websiteData) {
@@ -67,6 +69,10 @@ export function DashboardShell() {
         return;
       }
 
+      if (result.siteId) {
+        setPublishedSiteId(result.siteId);
+      }
+
       if (result.status === "READY") {
         completeImmediately(result.url);
         return;
@@ -105,6 +111,7 @@ export function DashboardShell() {
       <UrlInputForm
         websiteData={websiteData}
         onWebsiteDataChange={setWebsiteData}
+        publishedSiteId={publishedSiteId}
       />
     </div>
   );

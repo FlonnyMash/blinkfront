@@ -24,6 +24,7 @@ import type { GenerateWebsiteResult } from "@/lib/ai/generate-site";
 type UrlInputFormProps = {
   websiteData: Website | null;
   onWebsiteDataChange: (data: Website | null) => void;
+  publishedSiteId?: string | null;
 };
 
 type SeoAuditApiResponse =
@@ -52,6 +53,7 @@ async function readApiError(response: Response, fallback: string): Promise<strin
 export function UrlInputForm({
   websiteData,
   onWebsiteDataChange,
+  publishedSiteId,
 }: UrlInputFormProps) {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -261,6 +263,7 @@ export function UrlInputForm({
                 <LayoutRenderer
                   key={JSON.stringify(websiteData)}
                   data={websiteData}
+                  siteId={publishedSiteId ?? undefined}
                 />
               </div>
             </CardContent>

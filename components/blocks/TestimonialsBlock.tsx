@@ -4,7 +4,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { TestimonialsContent } from "@/types/layout";
+import { stripWrappingQuotes, type TestimonialsContent } from "@/types/layout";
 
 type TestimonialsBlockProps = {
   content: TestimonialsContent;
@@ -35,7 +35,7 @@ export function TestimonialsBlock({ content }: TestimonialsBlockProps) {
           >
             <CardContent className="pt-6">
               <p className="italic text-[var(--text)]/70">
-                &ldquo;{testimonial.quote}&rdquo;
+                &ldquo;{stripWrappingQuotes(testimonial.quote)}&rdquo;
               </p>
             </CardContent>
             <CardFooter className="flex flex-col items-start gap-0.5">

@@ -29,12 +29,12 @@ export function evaluateImages(snapshot: DomSnapshot): SeoAuditResult["images"] 
     imagesWithAlt: metricCheck(
       !hasImages || missingAlt === 0,
       altCoverageScore,
-      String(withAlt),
+      hasImages ? `${withAlt}/${total} with alt` : "No images",
       !hasImages
         ? "No images to evaluate."
         : missingAlt === 0
           ? "Every image has non-empty alt text."
-          : `Ensure all ${total} image(s) have meaningful alt text (${withAlt}/${total} currently do).`,
+          : `Add alt text on all ${total} image(s) (see missing alt above).`,
     ),
   };
 }

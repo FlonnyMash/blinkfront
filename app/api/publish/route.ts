@@ -8,6 +8,8 @@ import {
 } from "@/lib/deploy/vercel";
 import {
   mapVercelStatusToSiteStatus,
+  pendingDeploymentId,
+  updateSiteDeployment,
   updateSiteStatusByDeploymentId,
   upsertSiteRecord,
 } from "@/lib/sites";
@@ -70,9 +72,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const site = await upsertSiteRecord({
+      subdomain: slug,
+      vercelDeploymentId: pendingDeploymentId(slug),
+      status: "pending",
+    });
+
     const result =
       "website" in parsed.data
-        ? await deployWebsite(parsed.data.website, slug)
+        ? await deployWebsite(
+            parsed.data.website,
+            slug,
+            site?.id,
+          )
         : await createDeploymentFromBase64(
             parsed.data.encodedHtml,
             parsed.data.encodedCss,
@@ -80,14 +92,21 @@ export async function POST(request: Request) {
           );
 
     if (result.success) {
-      await upsertSiteRecord({
-        subdomain: slug,
-        vercelDeploymentId: result.deploymentId,
-        status: "pending",
-      });
+      if (site) {
+        await updateSiteDeployment(site.id, result.deploymentId, "pending");
+      } else {
+        await upsertSiteRecord({
+          subdomain: slug,
+          vercelDeploymentId: result.deploymentId,
+          status: "pending",
+        });
+      }
     }
 
-    return Response.json(result, { status: 200 });
+    return Response.json(
+      site?.id ? { ...result, siteId: site.id } : result,
+      { status: 200 },
+    );
   } catch {
     return Response.json(
       { success: false, error: "Failed to process publish request" },

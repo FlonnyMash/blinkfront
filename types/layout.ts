@@ -205,9 +205,41 @@ export const FeaturesContentSchema = z
   })
   .strict();
 
+const WRAPPING_QUOTE_CHARS = new Set([
+  '"',
+  "'",
+  "\u201C",
+  "\u201D",
+  "\u2018",
+  "\u2019",
+  "\u00AB",
+  "\u00BB",
+  "`",
+]);
+
+/** Removes leading/trailing quote characters the model often wraps around testimonial copy. */
+export function stripWrappingQuotes(text: string): string {
+  let result = text.trim();
+  let changed = true;
+  while (changed && result.length > 0) {
+    changed = false;
+    const first = result[0]!;
+    const last = result[result.length - 1]!;
+    if (WRAPPING_QUOTE_CHARS.has(first)) {
+      result = result.slice(1).trim();
+      changed = true;
+    }
+    if (result.length > 0 && WRAPPING_QUOTE_CHARS.has(last)) {
+      result = result.slice(0, -1).trim();
+      changed = true;
+    }
+  }
+  return result;
+}
+
 export const TestimonialItemSchema = z
   .object({
-    quote: z.string().min(1),
+    quote: z.string().min(1).transform(stripWrappingQuotes),
     author: z.string().min(1),
     role: z.string().min(1),
   })
@@ -424,7 +456,7 @@ function filterTestimonialItems(items: BlockContentGeneration["items"]) {
         item.quote.trim() && item.author.trim() && item.role.trim(),
     )
     .map((item) => ({
-      quote: item.quote.trim(),
+      quote: stripWrappingQuotes(item.quote),
       author: item.author.trim(),
       role: item.role.trim(),
     }));

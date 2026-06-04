@@ -1,3 +1,5 @@
+"use client";
+
 import { createElement } from "react";
 import {
   CircleCheck,
@@ -74,15 +76,10 @@ function resolveLucideIcon(name: string | undefined | null): LucideIcon | null {
 }
 
 export type DynamicIconProps = LucideProps & {
-  /** PascalCase lucide icon name (e.g. `Rocket`, `ShieldCheck`). Kebab-case is also accepted. */
   name?: string | null;
-  /** Used when `name` is missing or does not match a lucide export. */
   fallback?: DynamicIconFallback;
 };
 
-/**
- * Renders a lucide icon by string name. Unknown names never throw; they fall back or render nothing.
- */
 export function DynamicIcon({
   name,
   fallback = "circle-check",

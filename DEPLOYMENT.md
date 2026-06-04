@@ -23,6 +23,8 @@ Copy `.env.example` to `.env.local` for local development, and configure the sam
 | `VERCEL_TEAM_ID` | No | Team ID when deploying under a Vercel team |
 | `DEPLOYMENT_DOMAIN` | Yes | Base domain for published sites (e.g. `yourdomain.com`) |
 | `NEXT_PUBLIC_DEPLOYMENT_DOMAIN` | Yes | Same value as `DEPLOYMENT_DOMAIN`; used only for UI subdomain preview |
+| `NEXT_PUBLIC_APP_URL` | Yes (lead capture) | Absolute URL of this builder app (e.g. `https://your-builder.vercel.app`). Baked into published static HTML so tenant sites can `POST` to `/api/leads`. |
+| `DATABASE_URL` | Yes (lead capture) | PostgreSQL connection in **`.env.local`**. Use `npm run db:push` (loads `.env.local` for Prisma). |
 | `OPENAI_API_KEY` | Yes | Required for AI site generation (existing feature) |
 
 Published sites are served at:
@@ -41,6 +43,10 @@ Without a verified custom domain, published sites use their unique Vercel deploy
 2. The API renders static `index.html` and `style.css` from the existing block components.
 3. `lib/deploy/vercel.ts` uploads both files to the Vercel REST API (with `encoding: "base64"`) and assigns a production alias.
 4. The UI polls deployment status until the site is ready, then shows the live URL.
+5. A `Site` row is upserted before deploy so `siteId` can be embedded in CTA/Hero lead forms; submissions go to `POST /api/leads` (CORS-enabled for static tenant origins).
+6. Published HTML uses **plain `<form>` / `<input>` / `<button>` markup** plus an inlined vanilla script (`lib/deploy/lead-capture-script.ts`) — no React hydration on tenant sites. Set `NEXT_PUBLIC_APP_URL` to your builder’s public origin **before** publishing so `data-api-url` in the static HTML is correct.
+
+After schema changes, run `npm run db:push` and `npm run db:generate`. After lead-form style changes, run `npm run build:publish-css` (included in `npm run build`).
 
 ### Base64 publish payload
 

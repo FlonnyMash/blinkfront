@@ -60,6 +60,28 @@ export async function upsertSiteRecord(input: {
   });
 }
 
+export function pendingDeploymentId(subdomain: string): string {
+  return `pending:${subdomain}`;
+}
+
+export async function updateSiteDeployment(
+  id: string,
+  vercelDeploymentId: string,
+  status?: SiteStatus,
+): Promise<Site | null> {
+  if (!isDatabaseConfigured()) {
+    return null;
+  }
+
+  return prisma.site.update({
+    where: { id },
+    data: {
+      vercelDeploymentId,
+      ...(status ? { status } : {}),
+    },
+  });
+}
+
 export async function updateSiteStatus(
   id: string,
   status: SiteStatus,

@@ -47,7 +47,7 @@ export async function SitesTable() {
         <CardHeader>
           <CardTitle>Sites Management</CardTitle>
           <CardDescription>
-            Set DATABASE_URL (and DIRECT_URL for migrations) in your environment
+            Set DATABASE_URL in `.env` (for Prisma) and your app env
             to track published deployments.
           </CardDescription>
         </CardHeader>

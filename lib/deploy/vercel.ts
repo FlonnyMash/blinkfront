@@ -435,6 +435,7 @@ export async function createDeploymentFromBase64(
 export async function deployWebsite(
   data: Website,
   subdomain: string,
+  siteId?: string,
 ): Promise<DeployWebsiteResult> {
   const prepared = await prepareStaticSiteDeployment(subdomain);
   if (!prepared.success) {
@@ -442,7 +443,7 @@ export async function deployWebsite(
   }
 
   try {
-    const { html, css } = await renderWebsiteHtml(data);
+    const { html, css } = await renderWebsiteHtml(data, siteId);
     const filesResult = buildStaticSiteDeploymentFiles(html, css);
 
     if (!filesResult.success) {

@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum SiteStatus {
@@ -20,6 +19,18 @@ model Site {
   status             SiteStatus @default(pending)
   vercelDeploymentId String
   createdAt          DateTime   @default(now())
+  leads              Lead[]
 
   @@map("sites")
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  email     String
+  siteId    String
+  createdAt DateTime @default(now())
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, email])
+  @@map("leads")
 }

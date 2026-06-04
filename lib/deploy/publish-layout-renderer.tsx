@@ -3,12 +3,11 @@ import type { CSSProperties } from "react";
 import { HeaderBlock } from "@/components/blocks/HeaderBlock";
 import { CtaBlock } from "@/components/blocks/CtaBlock";
 import { FaqBlock } from "@/components/blocks/FaqBlock";
-import { FeaturesBlock } from "@/components/blocks/FeaturesBlock";
 import { FooterBlock } from "@/components/blocks/FooterBlock";
 import { HeroBlock } from "@/components/blocks/HeroBlock";
 import { TestimonialsBlock } from "@/components/blocks/TestimonialsBlock";
-import { LeadCaptureScript } from "@/components/ui/lead-capture-script";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { FeaturesBlockPublish } from "@/lib/deploy/features-block-publish";
 import { cn } from "@/lib/utils";
 import {
   ensureHeaderBlock,
@@ -20,7 +19,8 @@ import {
   type Website,
 } from "@/types/layout";
 
-type LayoutRendererProps = {
+
+type PublishLayoutRendererProps = {
   data: Website;
   siteId?: string;
   className?: string;
@@ -63,7 +63,7 @@ function renderBlock(block: LayoutBlock, index: number, siteId?: string) {
     case "Features":
       return (
         <ScrollReveal key={key}>
-          <FeaturesBlock content={block.content} />
+          <FeaturesBlockPublish content={block.content} />
         </ScrollReveal>
       );
     case "Testimonials":
@@ -91,7 +91,12 @@ function renderBlock(block: LayoutBlock, index: number, siteId?: string) {
   }
 }
 
-export function LayoutRenderer({ data, siteId, className }: LayoutRendererProps) {
+/** Server-only layout tree for static publish (ScrollReveal markup + injected IO script). */
+export function PublishLayoutRenderer({
+  data,
+  siteId,
+  className,
+}: PublishLayoutRendererProps) {
   const layout = ensureHeaderBlock(data.layout, getBrandName(data));
 
   return (
@@ -104,12 +109,10 @@ export function LayoutRenderer({ data, siteId, className }: LayoutRendererProps)
       style={getThemeStyle(data.theme)}
     >
       {layout.map((block, index) => renderBlock(block, index, siteId))}
-      {siteId ? <LeadCaptureScript /> : null}
     </div>
   );
 }
 
-/** Browser tab / publish title — the company brand, not the hero UVP. */
 export function getWebsiteTitle(data: Website): string {
   return getBrandName(data);
 }

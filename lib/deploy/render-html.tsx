@@ -3,8 +3,10 @@ import path from "node:path";
 
 import {
   getWebsiteTitle,
-  LayoutRenderer,
-} from "@/components/renderer/LayoutRenderer";
+  PublishLayoutRenderer,
+} from "@/lib/deploy/publish-layout-renderer";
+import { LEAD_CAPTURE_SCRIPT } from "@/lib/deploy/lead-capture-script";
+import { SCROLL_REVEAL_SCRIPT } from "@/lib/deploy/scroll-reveal-script";
 import type { Website } from "@/types/layout";
 
 function escapeHtml(text: string): string {
@@ -29,11 +31,17 @@ function loadPublishCss(): string {
 
 export async function renderWebsiteHtml(
   data: Website,
+  siteId?: string,
 ): Promise<{ html: string; css: string }> {
   const { renderToStaticMarkup } = await import("react-dom/server");
-  const body = renderToStaticMarkup(<LayoutRenderer data={data} />);
+  const body = renderToStaticMarkup(
+    <PublishLayoutRenderer data={data} siteId={siteId} />,
+  );
   const title = escapeHtml(getWebsiteTitle(data));
   const css = loadPublishCss();
+  const leadScript = siteId
+    ? `<script id="blinkfront-lead-capture">${LEAD_CAPTURE_SCRIPT}</script>`
+    : "";
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -46,6 +54,8 @@ export async function renderWebsiteHtml(
 </head>
 <body>
 ${body}
+<script>${SCROLL_REVEAL_SCRIPT}</script>
+${leadScript}
 </body>
 </html>`;
 

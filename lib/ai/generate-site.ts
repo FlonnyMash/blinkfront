@@ -52,6 +52,7 @@ Each item MUST include a semantic \`icon\` — a real \`lucide-react\` export na
 
 ### Testimonials
 Exactly 3 quotes from believable personas. Each quote cites a concrete result aligned with the UVP (metrics, time saved, problem solved).
+Do not wrap \`quote\` values in quotation marks—the UI adds typographic quotes automatically.
 
 ### FAQ
 Do not list boring or generic questions. Address real conversion anxieties and buying objections: pricing transparency, migration effort, contract lock-in, security/compliance proofs, onboarding time, support SLAs, ROI skepticism. Answers are direct and reassuring—never "contact us for details".
@@ -98,7 +99,7 @@ Start from the brief's theme archetype seed colors and art-direction tokens; tun
 - Header: headline = exact Brand name from prompt (not UVP), 3–4 links [{ label, href }], items [], variant "".
 - Hero: headline, subheadline, ctaText, variant (default | centered | split); items [], links [].
 - Features: heading + exactly 3 items (title, description, icon), variant (grid | list | cards). Other blocks: item \`icon\` "".
-- Testimonials: heading + exactly 3 items (quote, author, role).
+- Testimonials: heading + exactly 3 items (quote without surrounding " marks, author, role).
 - FAQ: heading + 3–5 items (question, answer).
 - Hero & CTA use headline; Features, Testimonials, FAQ use heading.
 - CTA: headline, buttonText, variant (default | minimal | split); subheadline or "".
