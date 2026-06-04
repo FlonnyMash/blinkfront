@@ -5,12 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build:publish-css": "node scripts/build-publish-css.mjs",
-    "build": "npm run build:publish-css && next build",
+    "build": "npm run build:publish-css && prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.67",
+    "@prisma/client": "^6.19.3",
     "ai": "^6.0.196",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
@@ -36,6 +40,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -66,18 +67,22 @@ export function DashboardHeader({
         </p>
       </div>
 
-      <Dialog
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) {
-            setValidationError(null);
-          }
-        }}
-      >
-        <DialogTrigger asChild>
-          <Button disabled={!websiteData || isPublishing}>Publish</Button>
-        </DialogTrigger>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">Sites</Link>
+        </Button>
+        <Dialog
+          open={open}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen);
+            if (!nextOpen) {
+              setValidationError(null);
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button disabled={!websiteData || isPublishing}>Publish</Button>
+          </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Publish your site</DialogTitle>
@@ -129,7 +134,8 @@ export function DashboardHeader({
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      </div>
     </header>
   );
 }

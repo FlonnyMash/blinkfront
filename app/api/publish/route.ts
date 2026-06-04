@@ -5,6 +5,11 @@ import {
   getDeploymentStatus,
   normalizeSubdomain,
 } from "@/lib/deploy/vercel";
+import {
+  mapVercelStatusToSiteStatus,
+  updateSiteStatusByDeploymentId,
+  upsertSiteRecord,
+} from "@/lib/sites";
 import { WebsiteSchema } from "@/lib/validations/website";
 
 export const maxDuration = 60;
@@ -53,6 +58,14 @@ export async function POST(request: Request) {
 
     const result = await deployWebsite(parsed.data.website, slug);
 
+    if (result.success) {
+      await upsertSiteRecord({
+        subdomain: slug,
+        vercelDeploymentId: result.deploymentId,
+        status: "pending",
+      });
+    }
+
     return Response.json(result, { status: 200 });
   } catch {
     return Response.json(
@@ -73,6 +86,11 @@ export async function GET(request: Request) {
   }
 
   const result = await getDeploymentStatus(deploymentId);
+
+  await updateSiteStatusByDeploymentId(
+    deploymentId,
+    mapVercelStatusToSiteStatus(result),
+  );
 
   return Response.json(result, { status: 200 });
 }
