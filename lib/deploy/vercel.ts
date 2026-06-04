@@ -33,6 +33,15 @@ type VercelDeploymentResponse = {
   error?: { message?: string; code?: string };
 };
 
+type VercelProjectResponse = {
+  id: string;
+  name: string;
+  framework?: string | null;
+  buildCommand?: string | null;
+};
+
+const STATIC_PUBLISH_PROJECT_ID = "prj_Qr16GHmiDeHN1vX7B6APCi8MhKKF";
+
 const STATIC_PROJECT_SETTINGS = {
   framework: null,
   buildCommand: null,
@@ -43,7 +52,7 @@ const STATIC_PROJECT_SETTINGS = {
 
 function getVercelEnv(): VercelEnv | DeployWebsiteFailure {
   const token = process.env.VERCEL_TOKEN;
-  const projectId = process.env.VERCEL_PROJECT_ID;
+  const projectId = process.env.PUBLISH_VERCEL_PROJECT_ID;
   const deploymentDomain = process.env.DEPLOYMENT_DOMAIN;
 
   if (!token) {
@@ -51,7 +60,11 @@ function getVercelEnv(): VercelEnv | DeployWebsiteFailure {
   }
 
   if (!projectId) {
-    return { success: false, error: "VERCEL_PROJECT_ID is not configured" };
+    return {
+      success: false,
+      error:
+        "PUBLISH_VERCEL_PROJECT_ID is not configured. Set it to your static publish project ID (not the builder app project).",
+    };
   }
 
   if (!deploymentDomain) {
@@ -106,6 +119,57 @@ async function vercelFetch<T>(
   return payload as T;
 }
 
+async function verifyPublishProject(env: VercelEnv): Promise<DeployWebsiteFailure | null> {
+  try {
+    const project = await vercelFetch<VercelProjectResponse>(
+      env,
+      `/v9/projects/${encodeURIComponent(env.projectId)}`,
+    );
+
+    if (project.framework && project.framework !== "null") {
+      return {
+        success: false,
+        error: `PUBLISH_VERCEL_PROJECT_ID is set to "${project.name}" (${project.framework}). Published sites must use the static project "blinkfront-published-sites" (${STATIC_PUBLISH_PROJECT_ID}). Update PUBLISH_VERCEL_PROJECT_ID in .env.local (or Vercel project env vars), then restart the dev server.`,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not verify the Vercel publish project",
+    };
+  }
+}
+
+async function getDeploymentErrorMessage(
+  env: VercelEnv,
+  deploymentId: string,
+  deployment: VercelDeploymentResponse,
+): Promise<string> {
+  if (deployment.error?.message) {
+    return deployment.error.message;
+  }
+
+  try {
+    const list = await vercelFetch<{ deployments: Array<{ uid: string; errorMessage?: string }> }>(
+      env,
+      `/v6/deployments?projectId=${encodeURIComponent(env.projectId)}&limit=20`,
+    );
+    const match = list.deployments.find((item) => item.uid === deploymentId);
+    if (match?.errorMessage) {
+      return match.errorMessage;
+    }
+  } catch {
+    // Fall through to generic guidance below.
+  }
+
+  return "Deployment failed on Vercel. Ensure PUBLISH_VERCEL_PROJECT_ID points to the static project blinkfront-published-sites, not your Next.js builder project.";
+}
+
 export function normalizeSubdomain(
   subdomain: string,
   deploymentDomain: string,
@@ -157,9 +221,11 @@ export async function getDeploymentStatus(
     }
 
     if (readyState === "ERROR" || readyState === "CANCELED") {
-      const errorMessage =
-        deployment.error?.message ??
-        "Deployment failed on Vercel. Use a separate static Vercel project for published sites (not your Next.js app project).";
+      const errorMessage = await getDeploymentErrorMessage(
+        env,
+        deploymentId,
+        deployment,
+      );
       return {
         success: false,
         error: errorMessage,
@@ -185,6 +251,11 @@ export async function deployWebsite(
   }
 
   const env = envResult as VercelEnv;
+  const projectError = await verifyPublishProject(env);
+  if (projectError) {
+    return projectError;
+  }
+
   const slug = normalizeSubdomain(subdomain, env.deploymentDomain);
 
   if (!slug) {

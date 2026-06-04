@@ -19,7 +19,7 @@ Copy `.env.example` to `.env.local` for local development, and configure the sam
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VERCEL_TOKEN` | Yes | Bearer token for Vercel REST API |
-| `VERCEL_PROJECT_ID` | Yes | Target project ID for tenant static deployments |
+| `PUBLISH_VERCEL_PROJECT_ID` | Yes | Target static project ID for tenant deployments. Do **not** use `VERCEL_PROJECT_ID` — on Vercel that name is reserved for the builder app itself. |
 | `VERCEL_TEAM_ID` | No | Team ID when deploying under a Vercel team |
 | `DEPLOYMENT_DOMAIN` | Yes | Base domain for published sites (e.g. `yourdomain.com`) |
 | `NEXT_PUBLIC_DEPLOYMENT_DOMAIN` | Yes | Same value as `DEPLOYMENT_DOMAIN`; used only for UI subdomain preview |
@@ -44,4 +44,4 @@ Example: if `DEPLOYMENT_DOMAIN=yourdomain.com` and the user publishes with subdo
 
 - Run `npm run build:publish-css` to generate `lib/deploy/site.css` before testing publish locally.
 - The full `npm run build` command runs CSS generation automatically.
-- Publishing will fail until `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, and `DEPLOYMENT_DOMAIN` are configured and the domain is verified on Vercel.
+- Publishing will fail until `VERCEL_TOKEN`, `PUBLISH_VERCEL_PROJECT_ID`, and `DEPLOYMENT_DOMAIN` are configured and the domain is verified on Vercel.
