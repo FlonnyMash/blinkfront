@@ -16,7 +16,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Button variant="outline" asChild>
-          <Link href="/">Back to builder</Link>
+          <Link href="/builder">Back to builder</Link>
         </Button>
       </div>
       <SitesTable />
