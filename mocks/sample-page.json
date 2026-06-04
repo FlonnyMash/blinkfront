@@ -12,6 +12,18 @@
   },
   "layout": [
     {
+      "type": "Header",
+      "content": {
+        "logoText": "Blinkfront",
+        "links": [
+          { "label": "Features", "href": "#features" },
+          { "label": "Testimonials", "href": "#testimonials" },
+          { "label": "FAQ", "href": "#faq" },
+          { "label": "Contact", "href": "#cta" }
+        ]
+      }
+    },
+    {
       "type": "Hero",
       "content": {
         "headline": "Ship high-performance sites in minutes",

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 
+import { HeaderBlock } from "@/components/blocks/HeaderBlock";
 import { CtaBlock } from "@/components/blocks/CtaBlock";
 import { FaqBlock } from "@/components/blocks/FaqBlock";
 import { FeaturesBlock } from "@/components/blocks/FeaturesBlock";
@@ -7,7 +8,7 @@ import { FooterBlock } from "@/components/blocks/FooterBlock";
 import { HeroBlock } from "@/components/blocks/HeroBlock";
 import { TestimonialsBlock } from "@/components/blocks/TestimonialsBlock";
 import { cn } from "@/lib/utils";
-import type { LayoutBlock, Website } from "@/types/layout";
+import { ensureHeaderBlock, type LayoutBlock, type Website } from "@/types/layout";
 
 type LayoutRendererProps = {
   data: Website;
@@ -28,6 +29,8 @@ function renderBlock(block: LayoutBlock, index: number) {
   const key = `${block.type}-${index}`;
 
   switch (block.type) {
+    case "Header":
+      return <HeaderBlock key={key} content={block.content} />;
     case "Hero":
       return <HeroBlock key={key} content={block.content} />;
     case "Features":
@@ -46,6 +49,8 @@ function renderBlock(block: LayoutBlock, index: number) {
 }
 
 export function LayoutRenderer({ data, className }: LayoutRendererProps) {
+  const layout = ensureHeaderBlock(data.layout, getWebsiteTitle(data));
+
   return (
     <div
       className={cn(
@@ -54,7 +59,7 @@ export function LayoutRenderer({ data, className }: LayoutRendererProps) {
       )}
       style={getThemeStyle(data.theme)}
     >
-      {data.layout.map((block, index) => renderBlock(block, index))}
+      {layout.map((block, index) => renderBlock(block, index))}
     </div>
   );
 }

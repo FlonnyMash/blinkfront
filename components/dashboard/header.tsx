@@ -56,6 +56,8 @@ export function DashboardHeader({
     onPublish(slug);
   }
 
+  const canPublish = Boolean(websiteData) && !isPublishing;
+
   return (
     <header className="flex w-full items-center justify-between gap-4 border-b pb-4">
       <div className="text-left">
@@ -80,9 +82,13 @@ export function DashboardHeader({
             }
           }}
         >
-          <DialogTrigger asChild>
-            <Button disabled={!websiteData || isPublishing}>Publish</Button>
-          </DialogTrigger>
+          {canPublish ? (
+            <DialogTrigger asChild>
+              <Button>Publish</Button>
+            </DialogTrigger>
+          ) : (
+            <Button disabled>Publish</Button>
+          )}
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Publish your site</DialogTitle>

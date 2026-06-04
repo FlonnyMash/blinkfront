@@ -13,6 +13,7 @@ type TestimonialsBlockProps = {
 export function TestimonialsBlock({ content }: TestimonialsBlockProps) {
   return (
     <section
+      id="testimonials"
       className={cn(
         "bg-[var(--secondary)]/10 text-[var(--text)]",
         content.sectionClassName ?? "w-full py-16",

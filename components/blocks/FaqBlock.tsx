@@ -8,6 +8,7 @@ type FaqBlockProps = {
 export function FaqBlock({ content }: FaqBlockProps) {
   return (
     <section
+      id="faq"
       className={cn(
         "bg-[var(--background)] text-[var(--text)]",
         content.sectionClassName ?? "mx-auto w-full max-w-2xl px-4 py-16",

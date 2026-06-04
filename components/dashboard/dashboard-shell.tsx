@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { DashboardHeader } from "@/components/dashboard/header";
+import { DeploymentStatusCard } from "@/components/dashboard/deployment-status-card";
 import { UrlInputForm } from "@/components/dashboard/url-input-form";
+import { useDeploymentPolling } from "@/hooks/useDeploymentPolling";
 import type { Website } from "@/types/layout";
 
 type PublishSuccessResponse = {
@@ -21,66 +22,26 @@ type PublishFailureResponse = {
 
 type PublishResponse = PublishSuccessResponse | PublishFailureResponse;
 
-type DeploymentStatusResponse =
-  | { success: true; status: "READY" | "BUILDING" | "ERROR"; url?: string }
-  | { success: false; error: string };
-
-const POLL_INTERVAL_MS = 2000;
-const POLL_TIMEOUT_MS = 60_000;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function pollDeploymentUntilReady(
-  deploymentId: string,
-  fallbackUrl: string,
-  toastId: string | number,
-): Promise<string> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    await sleep(POLL_INTERVAL_MS);
-
-    const response = await fetch(
-      `/api/publish?deploymentId=${encodeURIComponent(deploymentId)}`,
-    );
-
-    if (!response.ok) {
-      throw new Error(`Status check failed (HTTP ${response.status})`);
-    }
-
-    const result = (await response.json()) as DeploymentStatusResponse;
-
-    if (!result.success) {
-      throw new Error(result.error);
-    }
-
-    if (result.status === "READY") {
-      return result.url ?? fallbackUrl;
-    }
-
-    if (result.status === "ERROR") {
-      throw new Error("Deployment failed on Vercel");
-    }
-
-    toast.loading("Deploying to Global CDN...", { id: toastId });
-  }
-
-  return fallbackUrl;
-}
-
 export function DashboardShell() {
   const [websiteData, setWebsiteData] = useState<Website | null>(null);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const {
+    status: deploymentStatus,
+    liveUrl,
+    error: deploymentError,
+    isPublishing,
+    startPolling,
+    completeImmediately,
+    markBuilding,
+    failImmediately,
+    reset: resetDeployment,
+  } = useDeploymentPolling();
 
   async function handlePublish(subdomain: string) {
     if (!websiteData) {
       return;
     }
 
-    setIsPublishing(true);
-    const toastId = toast.loading("Deploying to Global CDN...");
+    markBuilding();
 
     try {
       const response = await fetch("/api/publish", {
@@ -96,24 +57,16 @@ export function DashboardShell() {
       const result = (await response.json()) as PublishResponse;
 
       if (!result.success) {
-        toast.error(result.error, { id: toastId });
+        failImmediately(result.error);
         return;
       }
 
-      const liveUrl = await pollDeploymentUntilReady(
-        result.deploymentId,
-        result.url,
-        toastId,
-      );
+      if (result.status === "READY") {
+        completeImmediately(result.url);
+        return;
+      }
 
-      toast.success("Your site is live!", {
-        id: toastId,
-        description: liveUrl,
-        action: {
-          label: "Open",
-          onClick: () => window.open(liveUrl, "_blank", "noopener,noreferrer"),
-        },
-      });
+      startPolling(result.deploymentId, result.url);
     } catch (error) {
       const message =
         error instanceof TypeError
@@ -122,9 +75,7 @@ export function DashboardShell() {
             ? error.message
             : "Failed to publish site";
 
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsPublishing(false);
+      failImmediately(message);
     }
   }
 
@@ -135,6 +86,16 @@ export function DashboardShell() {
         isPublishing={isPublishing}
         onPublish={handlePublish}
       />
+
+      {deploymentStatus !== "IDLE" ? (
+        <DeploymentStatusCard
+          status={deploymentStatus}
+          liveUrl={liveUrl}
+          error={deploymentError}
+          onDismiss={resetDeployment}
+        />
+      ) : null}
+
       <UrlInputForm
         websiteData={websiteData}
         onWebsiteDataChange={setWebsiteData}

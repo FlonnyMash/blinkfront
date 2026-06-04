@@ -240,10 +240,10 @@ export function UrlInputForm({
         />
       )}
 
-      {websiteData && seoData && (
+      {websiteData && (
         <ChatEditor
-          currentData={websiteData}
-          seoInsights={seoData}
+          currentWebsite={websiteData}
+          seoInsights={seoData ? JSON.stringify(seoData) : undefined}
           onUpdate={handleWebsiteUpdate}
         />
       )}
@@ -254,11 +254,13 @@ export function UrlInputForm({
             <CardHeader>
               <CardTitle>Live Preview</CardTitle>
             </CardHeader>
-            <CardContent>
-              <LayoutRenderer
-                key={JSON.stringify(websiteData)}
-                data={websiteData}
-              />
+            <CardContent className="overflow-hidden p-0">
+              <div className="max-h-[min(70vh,720px)] overflow-y-auto">
+                <LayoutRenderer
+                  key={JSON.stringify(websiteData)}
+                  data={websiteData}
+                />
+              </div>
             </CardContent>
           </Card>
 

@@ -1,16 +1,15 @@
 import { z } from "zod";
 
 import { editWebsiteData } from "@/lib/ai/edit-site";
-import { SeoAuditSchema } from "@/lib/validations/seo-audit";
 import { WebsiteSchema } from "@/types/layout";
 
 export const maxDuration = 60;
 
 const EditRequestSchema = z
   .object({
-    currentData: WebsiteSchema,
+    currentWebsite: WebsiteSchema,
     userPrompt: z.string().min(1),
-    seoInsights: SeoAuditSchema,
+    seoInsights: z.string().optional(),
   })
   .strict();
 
@@ -30,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const result = await editWebsiteData(
-      parsed.data.currentData,
+      parsed.data.currentWebsite,
       parsed.data.userPrompt,
       parsed.data.seoInsights,
     );
