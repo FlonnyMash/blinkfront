@@ -40,6 +40,10 @@ type VercelProjectResponse = {
   buildCommand?: string | null;
 };
 
+type VercelProjectDomainsResponse = {
+  domains: Array<{ name: string; verified: boolean }>;
+};
+
 const STATIC_PUBLISH_PROJECT_ID = "prj_Qr16GHmiDeHN1vX7B6APCi8MhKKF";
 
 const STATIC_PROJECT_SETTINGS = {
@@ -170,6 +174,60 @@ async function getDeploymentErrorMessage(
   return "Deployment failed on Vercel. Ensure PUBLISH_VERCEL_PROJECT_ID points to the static project blinkfront-published-sites, not your Next.js builder project.";
 }
 
+async function getVerifiedProjectDomains(env: VercelEnv): Promise<Set<string>> {
+  const response = await vercelFetch<VercelProjectDomainsResponse>(
+    env,
+    `/v9/projects/${encodeURIComponent(env.projectId)}/domains`,
+  );
+
+  return new Set(
+    response.domains
+      .filter((domain) => domain.verified)
+      .map((domain) => domain.name.toLowerCase()),
+  );
+}
+
+function canAssignCustomAlias(
+  deploymentDomain: string,
+  verifiedDomains: Set<string>,
+): boolean {
+  const domain = deploymentDomain.toLowerCase();
+
+  // Default *.vercel.app URLs cannot serve arbitrary slug subdomains with valid SSL.
+  if (domain.endsWith(".vercel.app")) {
+    return verifiedDomains.has(domain);
+  }
+
+  return verifiedDomains.has(domain);
+}
+
+function resolvePublicUrl(
+  deployment: VercelDeploymentResponse,
+  deploymentDomain: string,
+): string | undefined {
+  const deploymentUrl = deployment.url
+    ? `https://${deployment.url}`
+    : undefined;
+
+  if (!deployment.aliasAssigned || !deployment.alias?.length) {
+    return deploymentUrl;
+  }
+
+  const domain = deploymentDomain.toLowerCase();
+
+  // Default *.vercel.app project URLs cannot serve per-site slug subdomains.
+  if (domain.endsWith(".vercel.app")) {
+    return deploymentUrl;
+  }
+
+  const customAlias = deployment.alias.find((host) => {
+    const normalized = host.toLowerCase();
+    return normalized.endsWith(`.${domain}`) && normalized !== domain;
+  });
+
+  return customAlias ? `https://${customAlias}` : deploymentUrl;
+}
+
 export function normalizeSubdomain(
   subdomain: string,
   deploymentDomain: string,
@@ -209,14 +267,10 @@ export async function getDeploymentStatus(
     const readyState = deployment.readyState ?? "BUILDING";
 
     if (readyState === "READY") {
-      const alias = deployment.alias?.[0];
-      const deploymentUrl = deployment.url
-        ? `https://${deployment.url}`
-        : undefined;
       return {
         success: true,
         status: "READY",
-        url: alias ? `https://${alias}` : deploymentUrl,
+        url: resolvePublicUrl(deployment, env.deploymentDomain),
       };
     }
 
@@ -267,7 +321,21 @@ export async function deployWebsite(
   }
 
   const alias = `${slug}.${env.deploymentDomain}`;
-  const fallbackUrl = buildDeploymentUrl(slug, env.deploymentDomain);
+  let verifiedDomains: Set<string>;
+
+  try {
+    verifiedDomains = await getVerifiedProjectDomains(env);
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not verify publish project domains",
+    };
+  }
+
+  const useCustomAlias = canAssignCustomAlias(env.deploymentDomain, verifiedDomains);
 
   try {
     const { html, css } = await renderWebsiteHtml(data);
@@ -281,7 +349,8 @@ export async function deployWebsite(
           name: slug,
           project: env.projectId,
           target: "production",
-          alias: [alias],
+          public: true,
+          ...(useCustomAlias ? { alias: [alias] } : {}),
           projectSettings: STATIC_PROJECT_SETTINGS,
           files: [
             {
@@ -297,9 +366,18 @@ export async function deployWebsite(
       },
     );
 
+    const publicUrl = resolvePublicUrl(deployment, env.deploymentDomain);
+
+    if (!publicUrl) {
+      return {
+        success: false,
+        error: "Deployment succeeded but no public URL was returned by Vercel",
+      };
+    }
+
     return {
       success: true,
-      url: deployment.url ? `https://${deployment.url}` : fallbackUrl,
+      url: publicUrl,
       deploymentId: deployment.id,
       status: "BUILDING",
     };

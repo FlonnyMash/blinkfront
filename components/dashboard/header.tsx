@@ -82,11 +82,14 @@ export function DashboardHeader({
           <DialogHeader>
             <DialogTitle>Publish your site</DialogTitle>
             <DialogDescription>
-              Choose a subdomain for your live site. It will be available at{" "}
+              Choose a site name for this deployment. Without a custom domain,
+              your site will be live at a unique{" "}
+              <span className="font-medium text-foreground">*.vercel.app</span>{" "}
+              URL. To use{" "}
               <span className="font-medium text-foreground">
                 your-name.{deploymentDomain}
               </span>
-              .
+              , add and verify that domain on the publish project in Vercel.
             </DialogDescription>
           </DialogHeader>
 

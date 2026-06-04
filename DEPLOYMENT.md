@@ -31,7 +31,9 @@ Published sites are served at:
 https://{subdomain}.${DEPLOYMENT_DOMAIN}
 ```
 
-Example: if `DEPLOYMENT_DOMAIN=yourdomain.com` and the user publishes with subdomain `my-awesome-site`, the live URL is `https://my-awesome-site.yourdomain.com`.
+Example: if `DEPLOYMENT_DOMAIN=yourdomain.com` (verified on the **publish** project) and the user publishes with subdomain `my-awesome-site`, the live URL is `https://my-awesome-site.yourdomain.com`.
+
+Without a verified custom domain, published sites use their unique Vercel deployment URL (e.g. `https://blinkfront-published-sites-abc123-flonnymashs-projects.vercel.app`). Do **not** use another project's default `*.vercel.app` domain here — subdomains like `slug.blinkfront-five.vercel.app` will not have valid SSL.
 
 ## How publishing works
 
