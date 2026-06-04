@@ -5,7 +5,7 @@ import { performSeoAudit } from "@/lib/ai/seo-audit";
 export const maxDuration = 60;
 
 const SeoAuditRequestSchema = z
-  .object({ rawContent: z.string().min(1) })
+  .object({ url: z.string().min(1) })
   .strict();
 
 export async function POST(request: Request) {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = await performSeoAudit(parsed.data.rawContent);
+    const data = await performSeoAudit(parsed.data.url);
     return Response.json({ success: true, data }, { status: 200 });
   } catch (error) {
     return Response.json(

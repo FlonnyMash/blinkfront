@@ -15,7 +15,7 @@ import { ChatEditor } from "@/components/dashboard/chat-editor";
 import { SeoPreview } from "@/components/dashboard/seo-preview";
 import { LayoutRenderer } from "@/components/renderer/LayoutRenderer";
 import type { ScrapeUrlResult } from "@/lib/scraper";
-import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
+import type { SeoAuditResult } from "@/lib/validations/seo-audit-result";
 import { normalizeUrl } from "@/lib/utils";
 import type { SeoAudit } from "@/lib/validations/seo";
 import type { Website } from "@/types/layout";
@@ -27,7 +27,7 @@ type UrlInputFormProps = {
 };
 
 type SeoAuditApiResponse =
-  | { success: true; data: SeoAuditInsights }
+  | { success: true; data: SeoAuditResult }
   | { success: false; error: string };
 
 const LAST_URL_STORAGE_KEY = "blinkfront:lastUrl";
@@ -78,7 +78,7 @@ export function UrlInputForm({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SeoAudit | null>(null);
-  const [seoData, setSeoData] = useState<SeoAuditInsights | null>(null);
+  const [seoData, setSeoData] = useState<SeoAuditResult | null>(null);
 
   function handleWebsiteUpdate(data: Website) {
     onWebsiteDataChange(data);
@@ -135,7 +135,7 @@ export function UrlInputForm({
       const auditResponse = await fetch("/api/seo-audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawContent: scrapedResult.data.rawContent }),
+        body: JSON.stringify({ url: scrapedResult.data.url }),
       });
 
       const auditResult = (await auditResponse.json()) as SeoAuditApiResponse;
@@ -159,6 +159,8 @@ export function UrlInputForm({
         body: JSON.stringify({
           scrapedContent: scrapedResult.data.rawContent,
           seoAudit: auditResult.data,
+          siteTitle: scrapedResult.data.meta.title,
+          sourceUrl: scrapedResult.data.url,
         }),
       });
 

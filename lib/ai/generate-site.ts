@@ -2,10 +2,21 @@ import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { ZodError } from "zod";
 
+import {
+  applyDesignDirection,
+  buildDesignDirectionPrompt,
+  pickDesignDirection,
+} from "@/lib/ai/design-direction";
 import { requireOpenAiKey } from "@/lib/ai/require-openai-key";
 import { performSeoAudit } from "@/lib/ai/seo-audit";
-import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
-import { normalizeWebsite, WebsiteGenerationSchema, type Website } from "@/types/layout";
+import type { SeoAuditResult } from "@/lib/validations/seo-audit-result";
+import {
+  normalizeWebsite,
+  resolveBrandName,
+  syncWebsiteHeaderNav,
+  WebsiteGenerationSchema,
+  type Website,
+} from "@/types/layout";
 
 export type GenerateWebsiteSuccess = { success: true; data: Website };
 export type GenerateWebsiteFailure = { success: false; error: string };
@@ -37,6 +48,7 @@ Focus purely on benefits, not raw specifications. Translate every feature into a
 - Bad: "24/7 cloud sync"
 - Good: "Access your files anywhere, instantly"
 Section heading sells the collective outcome. Exactly 3 items: title = benefit headline, description = tangible gain.
+Each item MUST include a semantic \`icon\` — a real \`lucide-react\` export name in PascalCase (e.g. Brain, Globe, Lock, ShieldCheck, Zap, TrendingUp). Do not invent icon names; pick icons that match the benefit (speed → Zap, security → ShieldCheck, growth → TrendingUp).
 
 ### Testimonials
 Exactly 3 quotes from believable personas. Each quote cites a concrete result aligned with the UVP (metrics, time saved, problem solved).
@@ -48,25 +60,31 @@ Do not list boring or generic questions. Address real conversion anxieties and b
 headline = final value restatement. buttonText = strong micro-commitment. Avoid "Submit", "Click here", "Learn more".
 
 ### Header / Footer
-Header headline: 1–4 word brand only (not the hero UVP). Nav links: #features, #testimonials, #faq, #cta. Footer: concise copyright + 2–3 useful links.
+Header \`logoText\` MUST equal the **Brand name** given in the user prompt (scraped company name)—never the hero UVP, never a marketing tagline. Nav link **labels** are customizable; hrefs are synced to sections automatically. Footer: concise copyright + 2–3 useful links.
+
+## Cross-site uniqueness (critical)
+Every generation is a NEW brand experience. NEVER reuse the same layout triple, palette, or typography stack across different websites. A per-request **Unique design brief** section is appended below—follow it exactly for variants and theme seeds.
 
 ## Layout variants (strict enums)
-You MUST choose a specific layout \`variant\` from the schema enums for each block. Analyze the copy: if it is short and punchy, pick \`centered\` for Hero; if it requires visual balance, pick \`split\`. NEVER pick the first option blindly or repeat the same token on Hero, Features, and CTA.
 - Hero enum: \`default\` | \`centered\` | \`split\`
 - Features enum: \`grid\` | \`list\` | \`cards\`
 - CTA enum: \`default\` | \`minimal\` | \`split\`
-- Header, Testimonials, FAQ, Footer: \`variant\` must be \`""\` (empty enum token).
+- Header, Testimonials, FAQ, Footer: \`variant\` must be \`""\`
+Use the brief's required Hero/Features/CTA tokens—not your habitual default combo.
 
 ## Visual rhythm
-You are a master of visual rhythm. Create visual rhythm: alternate layouts so the page never feels monotonous. Example mix: Hero \`centered\`, Features \`grid\`, CTA \`split\`. Deliberately vary all three—do not set Hero, Features, and CTA to the same semantic weight (e.g. all \`default\`).
+Within the page, contrast block layouts (hero vs features vs CTA). Across websites, obey the unique brief so no two scrapes produce the same design fingerprint.
+
+## Art direction (mandatory)
+You MUST tailor the \`theme\` tokens strictly to the business niche scraped in the source material. A plumber needs different borders and colors than a high-end law firm or a crypto startup. Deliberately select \`fontFamily\` and \`borderRadius\` to match the brand's psychology—not generic defaults.
+- theme.fontFamily enum: \`sans\` (modern SaaS, trades, general business) | \`serif\` (luxury, law, finance, heritage) | \`mono\` (dev-tools, security, edgy tech)
+- theme.borderRadius enum: \`none\` (serious/corporate) | \`sm\` (standard SaaS) | \`lg\` (friendly consumer) | \`full\` (playful DTC / youth brands)
+Align both with the brief's archetype seeds; override when the scraped niche clearly demands different psychology.
 
 ## Theme & color token engine
-Infer brand mood from source material (enterprise, playful, luxury, technical) and generate a sophisticated, modern corporate palette.
-- theme.colors: primary, secondary, background, text — clean professional hex values only.
-- Avoid random bright neons, clashing complements, or decorative colors that hurt readability.
-- Primary on background and text on background must strictly pass WCAG AA contrast (≥ 4.5:1 for normal text). When in doubt, darken text (#0f172a–#1e293b) and lighten background (#ffffff–#f8fafc).
-- Primary and secondary should harmonize (same temperature family or restrained accent). Example caliber: primary #1d4ed8, secondary #475569, background #ffffff, text #0f172a — adapt to inferred industry.
-- theme.typography.fontFamily: one minimalist professional stack (e.g. "Inter, ui-sans-serif, system-ui, sans-serif").
+Start from the brief's theme archetype seed colors and art-direction tokens; tune hex values to match scraped brand mood while preserving that archetype's personality.
+- theme.colors: primary, secondary, background, text — WCAG AA contrast (≥ 4.5:1) on text/background and primary/background.
+- Avoid converging on the same blue-and-white SaaS palette every time unless the source is explicitly that aesthetic.
 
 ## Source material pipeline (before JSON)
 1. Mine: value proposition, ICP, pains, proof points, pricing signals, security claims.
@@ -75,10 +93,11 @@ Infer brand mood from source material (enterprise, playful, luxury, technical) a
 4. SEO: if insights are appended below, weave keywords naturally after the CRO rewrite.
 
 ## Schema contract (non-negotiable)
+- theme: colors (hex), fontFamily (sans | serif | mono), borderRadius (none | sm | lg | full).
 - All content fields present per block; unused strings "", unused arrays [].
-- Header: headline (brand), 3–4 links [{ label, href }], items [], variant "".
+- Header: headline = exact Brand name from prompt (not UVP), 3–4 links [{ label, href }], items [], variant "".
 - Hero: headline, subheadline, ctaText, variant (default | centered | split); items [], links [].
-- Features: heading + exactly 3 items (title, description), variant (grid | list | cards).
+- Features: heading + exactly 3 items (title, description, icon), variant (grid | list | cards). Other blocks: item \`icon\` "".
 - Testimonials: heading + exactly 3 items (quote, author, role).
 - FAQ: heading + 3–5 items (question, answer).
 - Hero & CTA use headline; Features, Testimonials, FAQ use heading.
@@ -86,18 +105,26 @@ Infer brand mood from source material (enterprise, playful, luxury, technical) a
 - Footer: copyrightText, links [{ label, href }], items [], variant "".
 - No markdown, HTML, or extra fields.`;
 
-function buildGenerationPrompt(scrapedContent: string): string {
-  return `You are writing a high-converting SaaS landing page—not transcribing the source below.
+function buildGenerationPrompt(
+  scrapedContent: string,
+  directionLabel: string,
+  brandName: string,
+): string {
+  return `You are writing a high-converting landing page—not transcribing the source below.
+
+Brand name (Header logoText only): "${brandName}" — use exactly this string for the Header block; the Hero headline must be a separate UVP.
+
+Design mandate: "${directionLabel}" — this layout/theme pairing must feel unique and intentional.
 
 Step 1: Read the source and identify the transformation you can promise.
 Step 2: Discard noise and generic corporate filler.
-Step 3: Output the full Website JSON with AIDA-ordered layout, benefit-driven Features (3 items), objection-killing FAQ, a WCAG-safe theme, and deliberately mixed layout variants (never all \`default\`).
+Step 3: Output the full Website JSON with AIDA-ordered layout, benefit-driven Features (3 items), objection-killing FAQ, theme tokens aligned to the design brief, and the exact Hero/Features/CTA variants specified in the brief.
 
 --- SOURCE MATERIAL ---
 ${scrapedContent.trim()}
 --- END SOURCE ---
 
-Do not return until every headline, feature title, FAQ question, and color token reflects CRO quality—not copy-paste formatting.`;
+Do not return until copy, colors, and variants all reflect this specific brief—not a generic template.`;
 }
 
 function formatError(error: unknown): string {
@@ -118,9 +145,16 @@ function formatError(error: unknown): string {
   return "An unknown error occurred";
 }
 
+export type GenerateWebsiteOptions = {
+  /** Original site <title> from scrape — stable company name. */
+  siteTitle?: string | null;
+  sourceUrl?: string;
+};
+
 export async function generateWebsiteData(
   scrapedContent: string,
-  seoAudit?: SeoAuditInsights,
+  seoAudit?: SeoAuditResult,
+  options?: GenerateWebsiteOptions,
 ): Promise<GenerateWebsiteResult> {
   try {
     if (!scrapedContent.trim()) {
@@ -129,24 +163,54 @@ export async function generateWebsiteData(
 
     requireOpenAiKey();
 
-    const audit = seoAudit ?? (await performSeoAudit(scrapedContent));
+    const audit =
+      seoAudit ??
+      (options?.sourceUrl
+        ? await performSeoAudit(options.sourceUrl)
+        : null);
+
+    if (!audit) {
+      return {
+        success: false,
+        error: "SEO audit or sourceUrl is required for generation",
+      };
+    }
+    const designDirection = pickDesignDirection();
+    const brandName = resolveBrandName({
+      siteTitle: options?.siteTitle,
+      url: options?.sourceUrl,
+    });
 
     const { object } = await generateObject({
       model: openai.chat("gpt-4o-mini"),
+      temperature: 0.9,
       schema: WebsiteGenerationSchema,
       schemaName: "Website",
       schemaDescription:
-        "High-converting SaaS landing page: AIDA layout blocks, benefit copy, WCAG theme tokens",
+        "High-converting landing page with unique layout variants and theme per design brief",
       system: `${SYSTEM_PROMPT}
 
-## SEO insights (apply last, after CRO rewrite)
+${buildDesignDirectionPrompt(designDirection)}
+
+## Deterministic SEO audit (apply last, after CRO rewrite)
+Overall score: ${audit.overallScore}/100. Fix failed checks (remediation fields) via stronger copy and structure—never keyword-stuff or weaken persuasion.
 ${JSON.stringify(audit)}
 
-Tune Hero UVP, Features outcomes, and FAQ objection answers for search intent—never keyword-stuff or weaken persuasion.`,
-      prompt: buildGenerationPrompt(scrapedContent),
+Prioritize failed meta/structure items; mirror good title/description patterns in Hero and meta-minded copy.`,
+      prompt: buildGenerationPrompt(
+        scrapedContent,
+        designDirection.label,
+        brandName,
+      ),
     });
 
-    return { success: true, data: normalizeWebsite(object) };
+    const website = normalizeWebsite(object, { brandName });
+    return {
+      success: true,
+      data: syncWebsiteHeaderNav(
+        applyDesignDirection(website, designDirection),
+      ),
+    };
   } catch (error) {
     return { success: false, error: formatError(error) };
   }

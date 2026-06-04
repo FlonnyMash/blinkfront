@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DashboardHeader } from "@/components/dashboard/header";
 import { DeploymentStatusCard } from "@/components/dashboard/deployment-status-card";
 import { UrlInputForm } from "@/components/dashboard/url-input-form";
 import { useDeploymentPolling } from "@/hooks/useDeploymentPolling";
-import type { Website } from "@/types/layout";
+import { getBrandName, type Website } from "@/types/layout";
 
 type PublishSuccessResponse = {
   success: true;
@@ -24,6 +24,12 @@ type PublishResponse = PublishSuccessResponse | PublishFailureResponse;
 
 export function DashboardShell() {
   const [websiteData, setWebsiteData] = useState<Website | null>(null);
+
+  useEffect(() => {
+    if (websiteData) {
+      document.title = getBrandName(websiteData);
+    }
+  }, [websiteData]);
   const {
     status: deploymentStatus,
     liveUrl,

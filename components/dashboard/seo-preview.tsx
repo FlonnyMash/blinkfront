@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,21 +13,35 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { SeoAuditInsights } from "@/lib/validations/seo-audit";
-
-const KEYWORD_BADGE_VARIANTS = [
-  "blue",
-  "violet",
-  "emerald",
-  "amber",
-  "rose",
-  "secondary",
-] as const;
+import type { SeoAuditCheck, SeoAuditResult } from "@/lib/validations/seo-audit-result";
 
 type SeoPreviewProps = {
-  seoData: SeoAuditInsights | null;
+  seoData: SeoAuditResult | null;
   isAuditing?: boolean;
   isGenerating?: boolean;
+};
+
+const CATEGORY_LABELS: Record<keyof Pick<SeoAuditResult, "meta" | "structure" | "images" | "links">, string> = {
+  meta: "Meta",
+  structure: "Structure",
+  images: "Images",
+  links: "Links",
+};
+
+const CHECK_LABELS: Record<string, string> = {
+  title: "Title",
+  description: "Description",
+  openGraph: "Open Graph",
+  canonical: "Canonical",
+  h1Count: "H1 count",
+  headingOrderValid: "Heading order",
+  semanticTagsUsed: "Semantic HTML",
+  totalImages: "Total images",
+  missingAltCount: "Missing alt",
+  imagesWithAlt: "Images with alt",
+  totalLinks: "Total links",
+  descriptiveTextCount: "Descriptive links",
+  brokenLinksCount: "Broken links",
 };
 
 function scoreLabel(score: number): string {
@@ -49,13 +63,6 @@ function scoreRingColor(score: number): string {
   if (score >= 60) return "stroke-amber-500";
   if (score >= 40) return "stroke-orange-500";
   return "stroke-red-500";
-}
-
-function parseAdviceItems(advice: string): string[] {
-  return advice
-    .split(/\n+|(?:^|\n)\s*[-•*]\s+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function SeoScoreRing({ score }: { score: number }) {
@@ -96,13 +103,58 @@ function SeoScoreRing({ score }: { score: number }) {
   );
 }
 
+function AuditCheckRow({ label, check }: { label: string; check: SeoAuditCheck }) {
+  return (
+    <li className="flex gap-3 rounded-lg border bg-card/50 px-3 py-2 text-sm">
+      {check.passed ? (
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
+      ) : (
+        <XCircle className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden />
+      )}
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{label}</span>
+          <Badge variant={check.passed ? "secondary" : "rose"}>
+            {check.score}/100
+          </Badge>
+          {check.value && (
+            <span className="truncate text-xs text-muted-foreground" title={check.value}>
+              {check.value}
+            </span>
+          )}
+        </div>
+        {!check.passed && (
+          <p className="text-xs leading-relaxed text-muted-foreground">{check.remediation}</p>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function CategorySection({
+  title,
+  checks,
+}: {
+  title: string;
+  checks: { key: string; check: SeoAuditCheck }[];
+}) {
+  return (
+    <section>
+      <h3 className="mb-2 text-sm font-medium">{title}</h3>
+      <ul className="space-y-2">
+        {checks.map(({ key, check }) => (
+          <AuditCheckRow key={key} label={CHECK_LABELS[key] ?? key} check={check} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function SeoPreview({
   seoData,
   isAuditing = false,
   isGenerating = false,
 }: SeoPreviewProps) {
-  const adviceItems = seoData ? parseAdviceItems(seoData.seoAdvice) : [];
-
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-card to-muted/30">
       <CardHeader className="border-b pb-4">
@@ -111,13 +163,13 @@ export function SeoPreview({
             <CardTitle>SEO Audit Report</CardTitle>
             <CardDescription className="mt-1">
               {isAuditing
-                ? "Analysing content for keyword opportunities and gaps..."
+                ? "Running deterministic on-page checks from the page HTML..."
                 : isGenerating
-                  ? "Audit complete — generating an optimized layout from these insights."
-                  : "Strategic recommendations extracted from your page content."}
+                  ? "Audit complete — generating an optimized layout from these results."
+                  : "Deterministic meta, structure, image, and link analysis."}
             </CardDescription>
           </div>
-          {seoData && <SeoScoreRing score={seoData.score} />}
+          {seoData && <SeoScoreRing score={seoData.overallScore} />}
           {isAuditing && !seoData && (
             <Skeleton className="size-28 shrink-0 rounded-full" />
           )}
@@ -128,64 +180,37 @@ export function SeoPreview({
         {isAuditing && !seoData ? (
           <div className="space-y-4">
             <Skeleton className="h-4 w-32" />
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} className="h-6 w-20 rounded-full" />
-              ))}
-            </div>
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
           </div>
         ) : seoData ? (
           <>
-            <section>
-              <h3 className="mb-2 text-sm font-medium">Primary Keywords</h3>
-              <div className="flex flex-wrap gap-2">
-                {seoData.primaryKeywords.map((keyword, index) => (
-                  <Badge
-                    key={keyword}
-                    variant={KEYWORD_BADGE_VARIANTS[index % KEYWORD_BADGE_VARIANTS.length]}
-                  >
-                    {keyword}
-                  </Badge>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <h3 className="mb-2 text-sm font-medium">Target Audience</h3>
-              <p className="leading-relaxed text-muted-foreground">
-                {seoData.targetAudience}
-              </p>
-            </section>
-
-            <section>
-              <h3 className="mb-2 text-sm font-medium">Content Gap</h3>
-              <p className="leading-relaxed text-muted-foreground">
-                {seoData.contentGap}
-              </p>
-            </section>
-
-            <section>
-              <h3 className="mb-2 text-sm font-medium">SEO Advice</h3>
-              <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                {adviceItems.map((item, index) => (
-                  <li key={index} className="leading-relaxed">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {seoData && (
-              <p className="text-xs text-muted-foreground">
-                Score rating:{" "}
-                <span className={cn("font-medium", scoreColor(seoData.score))}>
-                  {scoreLabel(seoData.score)}
-                </span>
-              </p>
+            {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map(
+              (categoryKey) => {
+                const category = seoData[categoryKey];
+                const checks = Object.entries(category).map(([key, check]) => ({
+                  key,
+                  check: check as SeoAuditCheck,
+                }));
+                return (
+                  <CategorySection
+                    key={categoryKey}
+                    title={CATEGORY_LABELS[categoryKey]}
+                    checks={checks}
+                  />
+                );
+              },
             )}
+
+            <p className="text-xs text-muted-foreground">
+              Score rating:{" "}
+              <span className={cn("font-medium", scoreColor(seoData.overallScore))}>
+                {scoreLabel(seoData.overallScore)}
+              </span>
+              {" · "}
+              Audited {new Date(seoData.auditedAt).toLocaleString()}
+            </p>
           </>
         ) : null}
       </CardContent>

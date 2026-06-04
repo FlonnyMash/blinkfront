@@ -17,21 +17,110 @@ export const ThemeColorsSchema = z
   })
   .strict();
 
-export const ThemeTypographySchema = z
-  .object({
-    fontFamily: z.string().min(1),
-  })
-  .strict();
+const THEME_FONT_FAMILY_VALUES = ["sans", "serif", "mono"] as const;
+const THEME_BORDER_RADIUS_VALUES = ["none", "sm", "lg", "full"] as const;
 
-export const ThemeSchema = z
+/** Required for OpenAI strict JSON schema (no `.default()` — defaults applied in `normalizeThemeInput`). */
+export const ThemeFontFamilySchema = z
+  .enum(THEME_FONT_FAMILY_VALUES)
+  .describe(
+    "Choose 'serif' for luxury, law, or traditional brands. Choose 'mono' for dev-tools or edgy tech. Choose 'sans' for modern SaaS or generic businesses.",
+  );
+
+/** Required for OpenAI strict JSON schema (no `.default()` — defaults applied in `normalizeThemeInput`). */
+export const ThemeBorderRadiusSchema = z
+  .enum(THEME_BORDER_RADIUS_VALUES)
+  .describe(
+    "Choose 'none' for serious/corporate, 'sm' for standard SaaS, 'lg' for friendly/consumer, and 'full' for playful brands.",
+  );
+
+export type ThemeFontFamily = z.infer<typeof ThemeFontFamilySchema>;
+export type ThemeBorderRadius = z.infer<typeof ThemeBorderRadiusSchema>;
+
+const DEFAULT_THEME_FONT_FAMILY = "sans" satisfies ThemeFontFamily;
+const DEFAULT_THEME_BORDER_RADIUS = "lg" satisfies ThemeBorderRadius;
+
+function coerceThemeFontFamily(raw: unknown): ThemeFontFamily {
+  const parsed = ThemeFontFamilySchema.safeParse(raw);
+  return parsed.success ? parsed.data : DEFAULT_THEME_FONT_FAMILY;
+}
+
+function coerceThemeBorderRadius(raw: unknown): ThemeBorderRadius {
+  const parsed = ThemeBorderRadiusSchema.safeParse(raw);
+  return parsed.success ? parsed.data : DEFAULT_THEME_BORDER_RADIUS;
+}
+
+/** Base `--radius` for shadcn/ui (buttons, inputs) on the site wrapper. */
+export const THEME_BORDER_RADIUS_CSS: Record<ThemeBorderRadius, string> = {
+  none: "0",
+  sm: "0.375rem",
+  lg: "0.625rem",
+  full: "1.5rem",
+};
+
+export const THEME_FONT_FAMILY_CLASS: Record<ThemeFontFamily, string> = {
+  sans: "font-sans",
+  serif: "font-serif",
+  mono: "font-mono",
+};
+
+const ThemeSchemaInner = z
   .object({
     colors: ThemeColorsSchema,
-    typography: ThemeTypographySchema,
+    fontFamily: ThemeFontFamilySchema,
+    borderRadius: ThemeBorderRadiusSchema,
   })
   .strict();
 
-export type Theme = z.infer<typeof ThemeSchema>;
+/** Maps legacy theme JSON and fills art-direction defaults before strict parse. */
+function normalizeThemeInput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") {
+    return raw;
+  }
+
+  let record = { ...(raw as Record<string, unknown>) };
+
+  if ("typography" in record && typeof record.typography === "object") {
+    const typography = record.typography as { fontFamily?: string };
+    const stack = (typography.fontFamily ?? "").toLowerCase();
+    let legacyFontFamily: ThemeFontFamily = DEFAULT_THEME_FONT_FAMILY;
+
+    if (
+      stack.includes("mono") ||
+      stack.includes("plex mono") ||
+      stack.includes("jetbrains")
+    ) {
+      legacyFontFamily = "mono";
+    } else if (
+      stack.includes("serif") ||
+      stack.includes("playfair") ||
+      stack.includes("georgia")
+    ) {
+      legacyFontFamily = "serif";
+    }
+
+    delete record.typography;
+    record = { ...record, fontFamily: legacyFontFamily };
+  }
+
+  return {
+    ...record,
+    fontFamily: coerceThemeFontFamily(record.fontFamily),
+    borderRadius: coerceThemeBorderRadius(record.borderRadius),
+  };
+}
+
+/** Strict theme shape for LLM `generateObject` (no preprocess). */
+export const ThemeGenerationSchema = ThemeSchemaInner;
+
+export const ThemeSchema = z.preprocess(normalizeThemeInput, ThemeSchemaInner);
+
+export type Theme = z.infer<typeof ThemeSchemaInner>;
 export type ThemeColors = z.infer<typeof ThemeColorsSchema>;
+
+export function parseTheme(theme: unknown): Theme {
+  return ThemeSchema.parse(theme);
+}
 
 export const BlockTypeSchema = z.enum([
   "Header",
@@ -96,6 +185,12 @@ export const FeatureItemSchema = z
   .object({
     title: z.string().min(1),
     description: z.string().min(1),
+    icon: z
+      .string()
+      .optional()
+      .describe(
+        "A valid lucide-react icon name in PascalCase (e.g. Rocket, ShieldCheck, Zap, TrendingUp). Choose a semantically appropriate icon.",
+      ),
     iconClassName: z.string().optional(),
   })
   .strict();
@@ -221,6 +316,7 @@ const LayoutBlockItemGenerationSchema = z
   .object({
     title: z.string(),
     description: z.string(),
+    icon: z.string(),
     iconClassName: z.string(),
     quote: z.string(),
     author: z.string(),
@@ -315,6 +411,7 @@ function filterFeatureItems(items: BlockContentGeneration["items"]) {
       title: item.title.trim(),
       description: item.description.trim(),
       ...pickOptional({
+        icon: optionalNonEmpty(item.icon),
         iconClassName: optionalNonEmpty(item.iconClassName),
       }),
     }));
@@ -363,14 +460,17 @@ const FEATURE_ITEM_PLACEHOLDERS: z.infer<typeof FeatureItemSchema>[] = [
   {
     title: "Ship faster",
     description: "Launch workflows in minutes instead of weeks of setup.",
+    icon: "Zap",
   },
   {
     title: "Stay in control",
     description: "One dashboard for visibility across every customer touchpoint.",
+    icon: "LayoutDashboard",
   },
   {
     title: "Prove ROI",
     description: "Track outcomes that matter to your team and your buyers.",
+    icon: "TrendingUp",
   },
 ];
 
@@ -414,12 +514,89 @@ function filterNavLinks(links: BlockContentGeneration["links"]) {
   return links.filter((link) => link.label.trim() && link.href.trim());
 }
 
-const DEFAULT_HEADER_LINKS: HeaderContent["links"] = [
-  { label: "Features", href: "#features" },
-  { label: "Testimonials", href: "#testimonials" },
-  { label: "FAQ", href: "#faq" },
-  { label: "Contact", href: "#cta" },
-];
+/** Section `id` attributes rendered on page blocks — nav hrefs must target these. */
+export const LAYOUT_SECTION_ANCHORS = [
+  { blockType: "Features" as const, id: "features", defaultLabel: "Features" },
+  {
+    blockType: "Testimonials" as const,
+    id: "testimonials",
+    defaultLabel: "Testimonials",
+  },
+  { blockType: "FAQ" as const, id: "faq", defaultLabel: "FAQ" },
+  { blockType: "CTA" as const, id: "cta", defaultLabel: "Contact" },
+] as const;
+
+/** Builds nav links from blocks present in the layout (href = `#${sectionId}`). */
+export function deriveNavLinksFromLayout(
+  layout: LayoutBlock[],
+): HeaderContent["links"] {
+  return LAYOUT_SECTION_ANCHORS.filter(({ blockType }) =>
+    layout.some((block) => block.type === blockType),
+  ).map(({ id, defaultLabel }) => ({
+    label: defaultLabel,
+    href: `#${id}`,
+  }));
+}
+
+function normalizeNavHref(href: string): string {
+  const trimmed = href.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+}
+
+/** Keeps AI-written labels when they target a real section; hrefs always match layout. */
+function mergeNavLinkLabels(
+  aiLinks: HeaderContent["links"],
+  derived: HeaderContent["links"],
+): HeaderContent["links"] {
+  return derived.map((link) => {
+    const match = aiLinks.find(
+      (candidate) => normalizeNavHref(candidate.href) === link.href,
+    );
+    return {
+      href: link.href,
+      label: match?.label.trim() || link.label,
+    };
+  });
+}
+
+/** Syncs header nav hrefs (and labels) with sections actually on the page. */
+export function syncHeaderNavLinks(layout: LayoutBlock[]): LayoutBlock[] {
+  const derived = deriveNavLinksFromLayout(layout);
+  if (derived.length === 0) {
+    return layout;
+  }
+
+  return layout.map((block) => {
+    if (block.type !== "Header") {
+      return block;
+    }
+
+    return {
+      type: "Header",
+      content: {
+        ...block.content,
+        links: mergeNavLinkLabels(block.content.links, derived),
+      },
+    };
+  });
+}
+
+export function syncWebsiteHeaderNav(website: Website): Website {
+  return {
+    ...website,
+    layout: syncHeaderNavLinks(website.layout),
+  };
+}
+
+const DEFAULT_HEADER_LINKS: HeaderContent["links"] = LAYOUT_SECTION_ANCHORS.map(
+  ({ id, defaultLabel }) => ({
+    label: defaultLabel,
+    href: `#${id}`,
+  }),
+);
 
 const MAX_HEADER_LOGO_LENGTH = 28;
 
@@ -449,6 +626,61 @@ export function normalizeHeaderLogoText(text: string): string {
   }
 
   return result || candidate.slice(0, MAX_HEADER_LOGO_LENGTH).trim();
+}
+
+/** Stable company name from scrape metadata or URL (not the hero UVP). */
+export function resolveBrandName(input: {
+  siteTitle?: string | null;
+  url?: string;
+  fallback?: string;
+}): string {
+  const fromTitle = input.siteTitle?.trim();
+  if (fromTitle) {
+    return normalizeHeaderLogoText(fromTitle);
+  }
+
+  if (input.url?.trim()) {
+    try {
+      const host = new URL(input.url).hostname.replace(/^www\./i, "");
+      const segment = host.split(".")[0] ?? "";
+      if (segment) {
+        const words = segment.replace(/[-_]+/g, " ");
+        return normalizeHeaderLogoText(words);
+      }
+    } catch {
+      // invalid URL — use fallback below
+    }
+  }
+
+  return normalizeHeaderLogoText(input.fallback ?? "Website");
+}
+
+/** Locks header logoText to the company brand (browser tab + nav). */
+export function syncBrandIdentity(
+  layout: LayoutBlock[],
+  brandName: string,
+): LayoutBlock[] {
+  const logoText = normalizeHeaderLogoText(brandName);
+
+  return layout.map((block) => {
+    if (block.type !== "Header") {
+      return block;
+    }
+
+    return {
+      type: "Header",
+      content: {
+        ...block.content,
+        logoText,
+      },
+    };
+  });
+}
+
+/** Company name shown in the header and browser title — not the hero headline. */
+export function getBrandName(data: Website): string {
+  const header = data.layout.find((block) => block.type === "Header");
+  return header?.content.logoText.trim() || "Website";
 }
 
 export function createDefaultHeaderBlock(logoText: string): LayoutBlock {
@@ -481,11 +713,11 @@ export function ensureHeaderBlock(
 ): LayoutBlock[] {
   const hasHeader = layout.some((block) => block.type === "Header");
 
-  if (hasHeader) {
-    return layout.map(normalizeHeaderBlock);
-  }
+  const withHeader = hasHeader
+    ? layout.map(normalizeHeaderBlock)
+    : [createDefaultHeaderBlock(fallbackLogo), ...layout];
 
-  return [createDefaultHeaderBlock(fallbackLogo), ...layout];
+  return syncHeaderNavLinks(withHeader);
 }
 
 const SECTION_HEADING_DEFAULTS = {
@@ -617,7 +849,7 @@ function parseLayoutBlock(block: LayoutBlockGeneration): LayoutBlock {
  */
 export const WebsiteGenerationSchema = z
   .object({
-    theme: ThemeSchema,
+    theme: ThemeGenerationSchema,
     layout: z.array(LayoutBlockGenerationSchema).min(1),
   })
   .strict();
@@ -695,11 +927,25 @@ export function stabilizeWebsiteInput(data: unknown): unknown {
   };
 }
 
+export type NormalizeWebsiteOptions = {
+  /** Scraped `<title>` or other stable company name — not the hero UVP. */
+  brandName?: string;
+};
+
 /** Normalizes LLM output into the strict Design Core website shape. */
-export function normalizeWebsite(data: WebsiteGeneration): Website {
+export function normalizeWebsite(
+  data: WebsiteGeneration,
+  options?: NormalizeWebsiteOptions,
+): Website {
+  let layout = syncHeaderNavLinks(data.layout.map(parseLayoutBlock));
+
+  if (options?.brandName?.trim()) {
+    layout = syncBrandIdentity(layout, options.brandName);
+  }
+
   return {
-    theme: data.theme,
-    layout: data.layout.map(parseLayoutBlock),
+    theme: parseTheme(data.theme),
+    layout,
   };
 }
 

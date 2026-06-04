@@ -8,11 +8,25 @@ import { FooterBlock } from "@/components/blocks/FooterBlock";
 import { HeroBlock } from "@/components/blocks/HeroBlock";
 import { TestimonialsBlock } from "@/components/blocks/TestimonialsBlock";
 import { cn } from "@/lib/utils";
-import { ensureHeaderBlock, type LayoutBlock, type Website } from "@/types/layout";
+import {
+  ensureHeaderBlock,
+  getBrandName,
+  THEME_BORDER_RADIUS_CSS,
+  THEME_FONT_FAMILY_CLASS,
+  type LayoutBlock,
+  type ThemeFontFamily,
+  type Website,
+} from "@/types/layout";
 
 type LayoutRendererProps = {
   data: Website;
   className?: string;
+};
+
+const THEME_FONT_HEADING_STACK: Record<ThemeFontFamily, string> = {
+  sans: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
+  serif: '"Source Serif 4", ui-serif, Georgia, serif',
+  mono: "var(--font-geist-mono), ui-monospace, monospace",
 };
 
 function getThemeStyle(theme: Website["theme"]): CSSProperties {
@@ -21,8 +35,14 @@ function getThemeStyle(theme: Website["theme"]): CSSProperties {
     "--secondary": theme.colors.secondary,
     "--background": theme.colors.background,
     "--text": theme.colors.text,
-    fontFamily: theme.typography.fontFamily,
+    "--surface": `color-mix(in srgb, ${theme.colors.secondary} 18%, ${theme.colors.background})`,
+    "--radius": THEME_BORDER_RADIUS_CSS[theme.borderRadius],
+    "--font-heading": THEME_FONT_HEADING_STACK[theme.fontFamily],
   } as CSSProperties;
+}
+
+function getThemeWrapperClass(theme: Website["theme"]): string {
+  return THEME_FONT_FAMILY_CLASS[theme.fontFamily];
 }
 
 function renderBlock(block: LayoutBlock, index: number) {
@@ -49,12 +69,13 @@ function renderBlock(block: LayoutBlock, index: number) {
 }
 
 export function LayoutRenderer({ data, className }: LayoutRendererProps) {
-  const layout = ensureHeaderBlock(data.layout, getWebsiteTitle(data));
+  const layout = ensureHeaderBlock(data.layout, getBrandName(data));
 
   return (
     <div
       className={cn(
         "flex min-h-screen flex-col bg-[var(--background)] text-[var(--text)] antialiased",
+        getThemeWrapperClass(data.theme),
         className,
       )}
       style={getThemeStyle(data.theme)}
@@ -64,7 +85,7 @@ export function LayoutRenderer({ data, className }: LayoutRendererProps) {
   );
 }
 
+/** Browser tab / publish title — the company brand, not the hero UVP. */
 export function getWebsiteTitle(data: Website): string {
-  const hero = data.layout.find((block) => block.type === "Hero");
-  return hero?.content.headline ?? "Website";
+  return getBrandName(data);
 }

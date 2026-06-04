@@ -6,6 +6,7 @@ import { requireOpenAiKey } from "@/lib/ai/require-openai-key";
 import {
   normalizeWebsite,
   stabilizeWebsiteInput,
+  syncWebsiteHeaderNav,
   WebsiteGenerationSchema,
   WebsiteSchema,
   type Website,
@@ -33,6 +34,7 @@ headline = ultra-punchy benefit-driven UVP. NEVER "Welcome to X", "We offer serv
 
 ### Features
 Benefits only—translate specs into outcomes (e.g. "24/7 cloud sync" → "Access your files anywhere, instantly"). Exactly 3 items; title = benefit, description = tangible gain.
+Each item MUST include a semantic \`icon\` — a real \`lucide-react\` name in PascalCase (e.g. Brain, Globe, Lock). Do not invent names; match icon to benefit.
 
 ### Testimonials
 Exactly 3 items; quotes cite concrete results aligned with the UVP.
@@ -44,7 +46,7 @@ Address conversion anxieties (pricing, migration, security, onboarding, ROI)—n
 headline restates value; buttonText = strong micro-commitment (not "Submit" or "Learn more").
 
 ### Header / Footer
-Header logoText: 1–4 word brand only (never the hero UVP). Nav anchors: #features, #testimonials, #faq, #cta. Footer: concise copyright + useful links.
+Header logoText: 1–4 word brand only (never the hero UVP). Customize nav **labels** only; section hrefs (#features, #testimonials, #faq, #cta) are enforced from layout. Footer: concise copyright + useful links.
 
 ## Layout variants (strict enums)
 You MUST choose a specific layout \`variant\` from the schema enums for each block. Analyze the copy: if it is short and punchy, pick \`centered\` for Hero; if it requires visual balance, pick \`split\`. NEVER pick the first option blindly or repeat the same token on Hero, Features, and CTA.
@@ -56,17 +58,22 @@ You MUST choose a specific layout \`variant\` from the schema enums for each blo
 ## Visual rhythm
 You are a master of visual rhythm. Create visual rhythm: alternate layouts so the page never feels monotonous. Example mix: Hero \`centered\`, Features \`grid\`, CTA \`split\`. Deliberately vary all three when updating variants.
 
+## Art direction (mandatory)
+You MUST tailor the \`theme\` tokens strictly to the business niche implied by the site copy and user request. A plumber needs different borders and colors than a high-end law firm or a crypto startup. Deliberately select \`fontFamily\` and \`borderRadius\` to match the brand's psychology when theme or visual identity is in scope.
+- theme.fontFamily enum: \`sans\` | \`serif\` | \`mono\`
+- theme.borderRadius enum: \`none\` | \`sm\` | \`lg\` | \`full\`
+
 ## Theme & color token engine
 theme.colors: primary, secondary, background, text — clean professional hex values.
-- Sophisticated modern corporate palette; avoid random bright neons or clashing pairs.
+- Sophisticated palette matched to niche; avoid random bright neons or clashing pairs unless the brand demands it.
 - Primary on background and text on background must pass WCAG AA (≥ 4.5:1). Harmonize primary/secondary in the same temperature family.
-- theme.typography.fontFamily: one minimalist stack (e.g. "Inter, ui-sans-serif, system-ui, sans-serif").
 
 ## Schema contract
+- theme: colors (hex), fontFamily (sans | serif | mono), borderRadius (none | sm | lg | full).
 - All content fields present; unused strings "", unused arrays [].
 - Header: logoText, 3–4 links [{ label, href }], variant "".
 - Hero: headline, subheadline, ctaText, variant (default | centered | split).
-- Features: heading + exactly 3 items, variant (grid | list | cards). Testimonials: heading + exactly 3 items. FAQ: heading + 3–5 items.
+- Features: heading + exactly 3 items (title, description, icon), variant (grid | list | cards). Testimonials/FAQ items: \`icon\` "". Testimonials: heading + exactly 3 items. FAQ: heading + 3–5 items.
 - CTA: variant (default | minimal | split).
 - Hero & CTA use headline; Features, Testimonials, FAQ use heading.
 - No markdown, HTML, or extra fields.`;
@@ -78,7 +85,9 @@ You receive a currentWebsite JSON and a userPrompt.
 - Preserve the AIDA block sequence (Header, Hero, Features, Testimonials, FAQ, CTA, Footer) unless the user explicitly asks to reorder, add, or remove blocks.
 - Do not drop blocks or empty required fields to satisfy a partial edit—return a complete valid website.
 - When the user prompt implies layout or visual structure changes, update \`variant\` on Hero, Features, or CTA alongside copy and apply visual-rhythm mixing (do not set all three to \`default\`); otherwise preserve existing variants.
-- Theme changes go through theme.colors and theme.typography only.
+- When editing Features copy or benefits, update each item's \`icon\` to stay semantically aligned; otherwise preserve existing icons.
+- Theme changes go through theme.colors, theme.fontFamily, and theme.borderRadius.
+- When the user asks for a more corporate, playful, luxury, or technical look, update fontFamily and/or borderRadius alongside colors.
 - Color edits: new hex codes must stay clean, corporate, and WCAG AA compliant (≥ 4.5:1 for text on background and primary on background).`;
 
 function formatError(error: unknown): string {
@@ -156,7 +165,9 @@ export async function editWebsiteData(
 
       return {
         success: true,
-        data: WebsiteSchema.parse(stabilizeWebsiteInput(object)),
+        data: syncWebsiteHeaderNav(
+          WebsiteSchema.parse(stabilizeWebsiteInput(object)),
+        ),
       };
     } catch {
       // WebsiteSchema uses discriminated unions; fall back to the OpenAI-compatible schema.
@@ -171,7 +182,9 @@ export async function editWebsiteData(
 
       return {
         success: true,
-        data: WebsiteSchema.parse(stabilizeWebsiteInput(normalizeWebsite(object))),
+        data: syncWebsiteHeaderNav(
+          WebsiteSchema.parse(stabilizeWebsiteInput(normalizeWebsite(object))),
+        ),
       };
     }
   } catch (error) {

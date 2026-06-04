@@ -6,9 +6,8 @@
       "background": "#ffffff",
       "text": "#1d1d1f"
     },
-    "typography": {
-      "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
-    }
+    "fontFamily": "sans",
+    "borderRadius": "lg"
   },
   "layout": [
     {
@@ -41,17 +40,17 @@
           {
             "title": "Structured output",
             "description": "Every page is validated against a strict Zod schema before it reaches the renderer.",
-            "iconClassName": "size-5 text-[#0071e3]"
+            "icon": "ShieldCheck"
           },
           {
             "title": "Component mapping",
             "description": "Layout blocks resolve directly to Server Components with minimal client JavaScript.",
-            "iconClassName": "size-5 text-[#0071e3]"
+            "icon": "Layers"
           },
           {
             "title": "Theme tokens",
             "description": "Colors and typography flow from JSON tokens into Tailwind-friendly presentation.",
-            "iconClassName": "size-5 text-[#0071e3]"
+            "icon": "Palette"
           }
         ],
         "sectionClassName": "mx-auto w-full max-w-5xl px-4 py-16",
@@ -94,7 +93,7 @@
           },
           {
             "question": "Can I customize theme tokens?",
-            "answer": "Yes. Set primary, secondary, background, and text colors plus a fontFamily stack in the theme object."
+            "answer": "Yes. Set primary, secondary, background, and text colors plus fontFamily (sans, serif, mono) and borderRadius (none, sm, lg, full) in the theme object."
           },
           {
             "question": "Is the output optimized for performance?",

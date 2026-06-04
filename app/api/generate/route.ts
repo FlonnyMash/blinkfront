@@ -1,14 +1,16 @@
 import { z } from "zod";
 
 import { generateWebsiteData } from "@/lib/ai/generate-site";
-import { SeoAuditSchema } from "@/lib/validations/seo-audit";
+import { SeoAuditResultSchema } from "@/lib/validations/seo-audit-result";
 
 export const maxDuration = 60;
 
 const GenerateRequestSchema = z
   .object({
     scrapedContent: z.string().min(1),
-    seoAudit: SeoAuditSchema.optional(),
+    seoAudit: SeoAuditResultSchema.optional(),
+    siteTitle: z.string().nullable().optional(),
+    sourceUrl: z.string().url().optional(),
   })
   .strict();
 
@@ -30,6 +32,10 @@ export async function POST(request: Request) {
     const result = await generateWebsiteData(
       parsed.data.scrapedContent,
       parsed.data.seoAudit,
+      {
+        siteTitle: parsed.data.siteTitle,
+        sourceUrl: parsed.data.sourceUrl,
+      },
     );
 
     return Response.json(result, { status: 200 });

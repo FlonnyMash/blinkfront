@@ -42,6 +42,7 @@ export async function renderWebsiteHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${title}</title>
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=IBM+Plex+Sans:wght@400;600;700&family=Manrope:wght@400;600;700&family=Nunito+Sans:wght@400;600;700&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Source+Serif+4:wght@400;600;700&display=swap" />
 </head>
 <body>
 ${body}
