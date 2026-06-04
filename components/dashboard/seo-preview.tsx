@@ -1,12 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  Sparkles,
 } from "lucide-react";
 
 import {
@@ -15,7 +12,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { SeoOptimizeCta } from "@/components/dashboard/seo-optimize-cta";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -38,8 +34,6 @@ type SeoPreviewProps = {
   variant?: SeoPreviewVariant;
   user?: SessionUser | null;
   onPrepareSignIn?: () => void;
-  showOptimizeCta?: boolean;
-  onOptimizeWithAI?: () => void;
   className?: string;
 };
 
@@ -598,7 +592,7 @@ function CategoryBentoCard({
     <div
       className={cn(
         CATEGORY_CARD_SURFACE_CLASS,
-        "min-w-0 overflow-hidden",
+        "min-h-min min-w-0",
         compact ? "p-3.5" : "p-4 md:p-5",
         pulseGrid && "animate-pulse",
       )}
@@ -673,137 +667,94 @@ export function SeoPreview({
   isGenerating = false,
   pulseGrid = false,
   variant = "default",
-  user = null,
-  onPrepareSignIn,
-  showOptimizeCta = false,
-  onOptimizeWithAI,
   className,
 }: SeoPreviewProps) {
-  const router = useRouter();
   const isCompact = variant === "compact";
-  const isGuest = user === null;
   const categories = seoData ? buildCategories(seoData) : [];
   const totalIssues = categories.reduce((sum, cat) => {
     const checks = filterCategoryChecks(cat.key, cat.checks);
     return sum + checks.filter(({ check }) => !check.passed).length;
   }, 0);
 
-  const showGuestPreviewBar =
-    !isCompact && isGuest && seoData && !isGenerating && !isAuditing;
   const showAiFixing = isAuditing || isGenerating;
   const showGeneratingFooter = !isCompact && isGenerating && seoData;
-  const showOptimizeButton =
-    !isCompact &&
-    Boolean(onOptimizeWithAI) &&
-    seoData !== null &&
-    !isAuditing;
-
   return (
     <Card
       className={cn(
-        "relative w-full max-w-full gap-0 overflow-hidden rounded-2xl border border-slate-200/50 bg-white/80 py-0 shadow-sm ring-0 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-950/80",
+        "relative w-full max-w-full min-h-min gap-0 overflow-visible rounded-2xl border border-slate-200/50 bg-white/80 py-0 shadow-sm ring-0 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-950/80",
         className,
       )}
     >
-      {showGuestPreviewBar ? (
-        <div
-          className="relative z-10 flex items-center gap-2 border-b border-slate-200/50 bg-white/50 px-4 py-2 text-xs text-muted-foreground backdrop-blur-sm md:px-5 dark:border-slate-800/50 dark:bg-slate-900/40"
-          role="status"
-        >
-          <Sparkles className="size-3.5 shrink-0 opacity-60" aria-hidden />
-          <span>
-            Preview mode.{" "}
-            <button
-              type="button"
-              onClick={() => {
-                onPrepareSignIn?.();
-                router.push("/login?returnTo=%2Fbuilder");
-              }}
-              className="text-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Sign in
-            </button>{" "}
-            to save your site.
-          </span>
-        </div>
-      ) : null}
-
       <CardContent
         className={cn(
-          "relative z-10 w-full max-w-full space-y-4 overflow-hidden",
+          "relative z-10 w-full max-w-full min-h-min space-y-4",
           isCompact ? "px-3.5 pt-3.5 pb-3.5" : "p-4 md:p-5",
         )}
       >
-        <div
-          className={cn(
-            "flex w-full min-w-0 flex-col items-center overflow-hidden",
-            isCompact ? "gap-3 sm:flex-row sm:items-center" : "gap-4 sm:flex-row sm:items-start",
-          )}
-        >
+        <div className="flex w-full min-h-min min-w-0 flex-col gap-3">
           <div
             className={cn(
-              "flex w-fit max-w-full shrink-0 flex-col items-center gap-3",
-              isCompact ? "min-w-20" : "min-w-28",
+              "flex w-full min-w-0 flex-col items-center gap-4",
+              "sm:flex-row sm:items-center sm:justify-start sm:gap-5",
             )}
           >
-            {seoData ? (
-              <SeoScoreGauge score={seoData.overallScore} size={variant} />
-            ) : isAuditing ? (
-              <Skeleton
-                className={cn(
-                  "rounded-full",
-                  isCompact ? "size-20" : "size-28",
-                )}
-              />
-            ) : null}
-
-            {showOptimizeButton ? (
-              <SeoOptimizeCta
-                showAuditCta={showOptimizeCta}
-                onOptimizeWithAI={onOptimizeWithAI!}
-                className="w-auto self-center"
-              />
-            ) : null}
-          </div>
-
-          <div className="min-w-0 w-full flex-1 space-y-1 text-center sm:text-left">
-            <h2
+            <div
               className={cn(
-                "font-semibold tracking-tight",
-                isCompact ? "text-base" : "text-lg",
+                "flex shrink-0 justify-center",
+                isCompact ? "min-w-20" : "min-w-28",
               )}
             >
-              SEO Core Vitals Audit
-            </h2>
-            {seoData ? (
-              <p
-                className="text-xs text-muted-foreground"
-                suppressHydrationWarning
+              {seoData ? (
+                <SeoScoreGauge score={seoData.overallScore} size={variant} />
+              ) : isAuditing ? (
+                <Skeleton
+                  className={cn(
+                    "rounded-full",
+                    isCompact ? "size-20" : "size-28",
+                  )}
+                />
+              ) : null}
+            </div>
+
+            <div className="min-h-min min-w-0 max-w-full space-y-1 text-center sm:flex-1 sm:text-left">
+              <h2
+                className={cn(
+                  "font-semibold tracking-tight",
+                  isCompact ? "text-base" : "text-lg",
+                )}
               >
-                Audited{" "}
-                {new Date(seoData.auditedAt).toLocaleString(undefined, {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
+                SEO Core Vitals Audit
+              </h2>
+              {seoData ? (
+                <p
+                  className="text-xs text-muted-foreground"
+                  suppressHydrationWarning
+                >
+                  Audited{" "}
+                  {new Date(seoData.auditedAt).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </p>
+              ) : null}
+              <p className="break-words text-sm leading-relaxed text-muted-foreground">
+                {isScraping && !isAuditing
+                  ? "Fetching page content and preparing your SEO audit…"
+                  : isAuditing
+                    ? "Analyzing page HTML for meta, structure, images, and links…"
+                    : isGenerating
+                      ? "Audit complete — applying fixes to your generated layout."
+                      : seoData
+                        ? buildSummary(seoData.overallScore, totalIssues)
+                        : "Deterministic on-page SEO analysis."}
               </p>
-            ) : null}
-            <p className="break-words text-sm text-muted-foreground">
-              {isScraping && !isAuditing
-                ? "Fetching page content and preparing your SEO audit…"
-                : isAuditing
-                  ? "Analyzing page HTML for meta, structure, images, and links…"
-                  : isGenerating
-                    ? "Audit complete — applying fixes to your generated layout."
-                    : seoData
-                      ? buildSummary(seoData.overallScore, totalIssues)
-                      : "Deterministic on-page SEO analysis."}
-            </p>
+            </div>
           </div>
         </div>
 
         <div
           className={cn(
-            "grid w-full max-w-full grid-cols-1 overflow-hidden",
+            "grid min-h-min w-full max-w-full grid-cols-1",
             isCompact ? "gap-2" : "gap-3 md:grid-cols-2",
             !seoData && isAuditing && "animate-pulse",
           )}
@@ -826,7 +777,7 @@ export function SeoPreview({
       </CardContent>
 
       {showGeneratingFooter ? (
-        <CardFooter className="relative z-10 gap-2 border-t border-slate-100 bg-muted/30 px-4 py-2.5 text-sm text-muted-foreground md:px-5 dark:border-slate-800/50">
+        <CardFooter className="relative z-10 gap-2 rounded-b-2xl border-t border-slate-100 bg-muted/30 px-4 py-2.5 text-sm text-muted-foreground md:px-5 dark:border-slate-800/50">
           <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
           <span className="break-words">Generating layout from audit insights…</span>
         </CardFooter>

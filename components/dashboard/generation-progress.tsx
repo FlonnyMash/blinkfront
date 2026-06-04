@@ -120,7 +120,7 @@ export function GenerationProgress({
       className={cn(
         "transition-opacity duration-300",
         isEmbedded
-          ? "border-b border-slate-200/60 bg-slate-50/80 px-5 py-3.5 dark:border-slate-800/60 dark:bg-slate-900/40"
+          ? "overflow-hidden rounded-t-2xl border-b border-slate-200/60 bg-slate-50/80 px-5 py-3.5 dark:border-slate-800/60 dark:bg-slate-900/40"
           : "space-y-2.5 rounded-2xl border border-slate-200/60 bg-white/90 px-4 py-3 shadow-sm ring-1 ring-slate-200/40 backdrop-blur-sm dark:border-slate-800/60 dark:bg-slate-950/90 dark:ring-slate-800/50",
         className,
       )}

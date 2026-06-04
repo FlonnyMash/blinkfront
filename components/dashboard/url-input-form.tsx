@@ -15,6 +15,7 @@ import { ChatEditor } from "@/components/dashboard/chat-editor";
 import { GenerationPhaseView } from "@/components/dashboard/generation-phase-view";
 import { LivePreviewFrame } from "@/components/dashboard/live-preview-frame";
 import { SeoAuditPanel } from "@/components/dashboard/seo-audit-results";
+import { SeoOptimizeCta } from "@/components/dashboard/seo-optimize-cta";
 import { SeoPreview } from "@/components/dashboard/seo-preview";
 import { ResumeSessionDialog } from "@/components/dashboard/resume-session-dialog";
 import { StartNewScanDialog } from "@/components/dashboard/start-new-scan-dialog";
@@ -110,6 +111,9 @@ function UrlInputCard({
   isScanBusy,
   isAuditing,
   isHeroLayout,
+  isReviewComplete,
+  showAuditCta,
+  onOptimizeWithAI,
   handleSubmit,
 }: {
   url: string;
@@ -118,6 +122,10 @@ function UrlInputCard({
   isScanBusy: boolean;
   isAuditing: boolean;
   isHeroLayout: boolean;
+  /** Audit finished — lock URL field and hide scan action. */
+  isReviewComplete: boolean;
+  showAuditCta: boolean;
+  onOptimizeWithAI: () => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const [isFocused, setIsFocused] = useState(false);
@@ -178,30 +186,46 @@ function UrlInputCard({
             setUrl(e.target.value);
             setError(null);
           }}
-          disabled={isScanBusy}
-          required
-          className="min-w-0 flex-1 border-0 bg-transparent px-4 text-sm text-slate-900 outline-none focus:ring-0 focus-visible:ring-0 placeholder:text-slate-400 disabled:opacity-60 dark:text-slate-100"
-        />
-        <button
-          type="submit"
-          disabled={isScanBusy}
+          readOnly={isReviewComplete}
+          disabled={isScanBusy && !isReviewComplete}
+          required={!isReviewComplete}
+          aria-readonly={isReviewComplete}
           className={cn(
-            "flex shrink-0 items-center gap-2 rounded-full bg-indigo-600 px-5 text-sm font-medium text-white shadow-sm transition-all hover:bg-indigo-700 disabled:pointer-events-none disabled:opacity-60",
-            isHeroLayout ? "h-11" : "h-9",
+            "min-w-0 flex-1 border-0 bg-transparent px-4 text-sm text-slate-900 outline-none focus:ring-0 focus-visible:ring-0 placeholder:text-slate-400 dark:text-slate-100",
+            isReviewComplete
+              ? "cursor-default text-slate-700 dark:text-slate-200"
+              : "disabled:opacity-60",
           )}
-        >
-          {isScanBusy ? (
-            <>
-              <Loader2 className="size-4 shrink-0 animate-spin text-white" aria-hidden />
-              <span>{isAuditing ? "Analysing SEO…" : "Scanning…"}</span>
-            </>
-          ) : (
-            <>
-              <span>Scan URL</span>
-              <ArrowRight className="size-4 shrink-0 text-white" aria-hidden />
-            </>
-          )}
-        </button>
+        />
+        {isReviewComplete ? (
+          <SeoOptimizeCta
+            showAuditCta={showAuditCta}
+            onOptimizeWithAI={onOptimizeWithAI}
+            compact
+            className={isHeroLayout ? "[&_button]:!h-11 [&_button]:!min-h-11" : undefined}
+          />
+        ) : (
+          <button
+            type="submit"
+            disabled={isScanBusy}
+            className={cn(
+              "flex shrink-0 items-center gap-2 rounded-full bg-indigo-600 px-5 text-sm font-medium text-white shadow-sm transition-all hover:bg-indigo-700 disabled:pointer-events-none disabled:opacity-60",
+              isHeroLayout ? "h-11" : "h-9",
+            )}
+          >
+            {isScanBusy ? (
+              <>
+                <Loader2 className="size-4 shrink-0 animate-spin text-white" aria-hidden />
+                <span>{isAuditing ? "Analysing SEO…" : "Scanning…"}</span>
+              </>
+            ) : (
+              <>
+                <span>Scan URL</span>
+                <ArrowRight className="size-4 shrink-0 text-white" aria-hidden />
+              </>
+            )}
+          </button>
+        )}
       </form>
     </div>
   );
@@ -664,6 +688,8 @@ export function UrlInputForm({
     }
   }
 
+  const isReviewComplete = seoData !== null;
+
   const urlInputCard = (
     <UrlInputCard
       url={url}
@@ -672,6 +698,9 @@ export function UrlInputForm({
       isScanBusy={isScanBusy}
       isAuditing={isAuditing}
       isHeroLayout={isHeroLayout}
+      isReviewComplete={isReviewComplete}
+      showAuditCta={showAuditCta}
+      onOptimizeWithAI={() => void handleFixWithAI()}
       handleSubmit={handleSubmit}
     />
   );
@@ -688,8 +717,6 @@ export function UrlInputForm({
       isAuditing={isAuditing}
       isScraping={isLoading && !isAuditing}
       isLoading={isLoading}
-      showAuditCta={showAuditCta}
-      onOptimizeWithAI={() => void handleFixWithAI()}
       user={user}
       onPrepareSignIn={onPrepareSignIn}
       entrance={scanFlipSnapshot || isScanFlipAnimating ? "none" : "fade"}
@@ -744,7 +771,7 @@ export function UrlInputForm({
     return (
       <>
         {resumeSessionDialog}
-        <div className="relative z-10 grid w-full grid-cols-1 gap-4 antialiased transition-opacity duration-200 ease-in-out md:grid-cols-12 md:gap-6 md:h-[calc(100vh-4rem)] md:overflow-hidden">
+        <div className="relative z-10 flex h-full min-h-0 w-full flex-col gap-4 antialiased transition-opacity duration-200 ease-in-out md:grid md:grid-cols-12 md:gap-6 md:overflow-hidden">
         <aside
           className={cn(
             "flex min-h-0 flex-col gap-4 transition-all duration-300 md:col-span-4 md:min-h-0 md:overflow-hidden md:pr-2",
@@ -804,7 +831,7 @@ export function UrlInputForm({
         </aside>
         <section
           className={cn(
-            "flex min-h-[min(70vh,720px)] flex-col transition-all duration-300 md:h-full md:min-h-0",
+            "flex min-h-0 flex-1 flex-col transition-all duration-300 md:min-h-[min(70vh,720px)] md:h-full",
             isSidebarCollapsed ? "md:col-span-12" : "md:col-span-8",
           )}
         >
@@ -892,25 +919,27 @@ export function UrlInputForm({
       <section
         aria-label="URL scan"
         className={cn(
-          "relative z-10 w-full flex-1",
-          isHeroAtRest ? "min-h-0" : "mx-auto flex max-w-7xl flex-col gap-y-6 px-4",
+          "relative z-10 w-full",
+          isHeroAtRest
+            ? "h-full min-h-0 flex-1"
+            : "mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-y-4 px-4 sm:gap-y-6",
         )}
       >
         {isHeroAtRest ? (
-          <div className="pointer-events-none fixed inset-x-0 top-1/2 z-10 flex -translate-y-1/2 justify-center px-4">
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 flex -translate-y-1/2 justify-center px-4">
             <div className="pointer-events-auto w-full max-w-xl">
               {heroInputStack}
             </div>
           </div>
         ) : (
           <>
-            {heroInputStack}
+            <div className="shrink-0">{heroInputStack}</div>
             {showAuditResults ? (
               <div
                 ref={panelSlotRef}
                 style={flipStyles.panel}
                 className={cn(
-                  "w-full origin-top will-change-transform",
+                  "min-h-min w-full origin-top will-change-transform",
                   (scanFlipSnapshot || isScanFlipAnimating) &&
                     "min-h-[min(420px,58vh)]",
                 )}

@@ -12,8 +12,6 @@ type SeoAuditPanelProps = {
   isScraping?: boolean;
   isLoading?: boolean;
   isGenerating?: boolean;
-  showAuditCta?: boolean;
-  onOptimizeWithAI?: () => void;
   user?: SessionUser | null;
   onPrepareSignIn?: () => void;
   className?: string;
@@ -27,8 +25,6 @@ export function SeoAuditPanel({
   isScraping = false,
   isLoading = false,
   isGenerating = false,
-  showAuditCta = false,
-  onOptimizeWithAI,
   user = null,
   onPrepareSignIn,
   className,
@@ -37,6 +33,8 @@ export function SeoAuditPanel({
 }: SeoAuditPanelProps) {
   const isScanning = isScraping || isAuditing;
   const showPanel = seoData !== null || isScanning;
+  const embedProgressVisible =
+    embedProgress && (isLoading || isAuditing || isGenerating);
 
   if (!showPanel) {
     return null;
@@ -45,13 +43,13 @@ export function SeoAuditPanel({
   return (
     <div
       className={cn(
-        "w-full max-w-full overflow-hidden",
+        "min-h-min w-full max-w-full",
         entrance === "slide-up" && "animate-slide-up-panel",
         entrance === "fade" && "animate-fade-in",
         className,
       )}
     >
-      <div className="w-full max-w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white/90 shadow-lg ring-1 ring-slate-200/50 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/90 dark:ring-slate-800/50">
+      <div className="min-h-min w-full max-w-full isolate rounded-2xl border border-slate-200/60 bg-white/90 shadow-lg ring-1 ring-slate-200/50 dark:border-slate-800/60 dark:bg-slate-950/90 dark:ring-slate-800/50">
         {embedProgress ? (
           <GenerationProgress
             isLoading={isLoading}
@@ -68,12 +66,15 @@ export function SeoAuditPanel({
           pulseGrid={false}
           user={user}
           onPrepareSignIn={onPrepareSignIn}
-          showOptimizeCta={showAuditCta}
-          onOptimizeWithAI={onOptimizeWithAI}
           className={
             embedProgress
-              ? "rounded-none border-0 bg-transparent shadow-none ring-0"
-              : undefined
+              ? cn(
+                  "overflow-visible border-0 bg-transparent shadow-none ring-0 backdrop-blur-none rounded-b-2xl",
+                  embedProgressVisible
+                    ? "rounded-t-none"
+                    : "rounded-none rounded-t-2xl",
+                )
+              : "overflow-visible"
           }
         />
       </div>

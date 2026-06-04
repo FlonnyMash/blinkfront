@@ -42,7 +42,7 @@ export default function RootLayout({
         />
         <link href={THEME_FONTS_STYLESHEET} rel="stylesheet" />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-full flex-col">
         {children}
         <Toaster />
       </body>
