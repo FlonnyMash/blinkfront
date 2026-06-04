@@ -50,7 +50,7 @@ export function LivePreviewFrame({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border shadow-sm",
+        "flex flex-col overflow-hidden rounded-xl border border-border shadow-sm md:h-full md:min-h-0",
         className,
       )}
     >
@@ -106,7 +106,7 @@ export function LivePreviewFrame({
           aria-label="Preview URL"
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-b-xl border-x border-b border-border bg-white">
+      <div className="rounded-b-xl border-x border-b border-border bg-white md:min-h-0 md:flex-1 md:overflow-y-auto">
         <LayoutRenderer
           data={websiteData}
           siteId={siteId}

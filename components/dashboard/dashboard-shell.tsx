@@ -341,10 +341,10 @@ export function DashboardShell({
   const isHeroView = auditView === "hero" && !isImmersive;
 
   return (
-    <div className="relative isolate flex h-dvh flex-col overflow-hidden overscroll-none antialiased">
+    <div className="relative isolate flex min-h-dvh flex-col antialiased md:h-dvh md:overflow-hidden md:overscroll-none">
       {!isHeroView ? <BuilderFloatingBubbles /> : null}
       <BuilderAmbientBackground variant={backgroundVariant} />
-      <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
+      <div className="relative z-10 flex flex-1 flex-col md:h-full md:min-h-0">
         <header className="shrink-0">
           <DashboardHeader
             websiteData={websiteData}
@@ -357,24 +357,23 @@ export function DashboardShell({
           />
         </header>
 
-        <main className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden overscroll-none">
+        <main className="relative flex w-full flex-1 flex-col md:min-h-0 md:overflow-hidden md:overscroll-none">
           <div
             className={cn(
-              "mx-auto flex min-h-0 w-full flex-col px-6",
+              "mx-auto flex w-full flex-col px-6",
               isImmersive
-                ? "h-full max-w-full flex-1 gap-y-6 overflow-hidden py-4"
+                ? "max-w-full flex-1 gap-y-6 py-4 md:h-full md:overflow-hidden"
                 : isHeroView
-                  ? "h-full max-w-7xl flex-1 overflow-hidden"
-                  : "max-w-7xl flex-1 overflow-y-auto overscroll-none py-6 md:py-8",
+                  ? "max-w-7xl flex-1 md:h-full md:overflow-hidden"
+                  : "max-w-7xl flex-1 py-6 md:min-h-0 md:overflow-y-auto md:overscroll-none md:py-8",
               !isImmersive && !isHeroView && "gap-y-6",
             )}
           >
             <div
               className={cn(
                 "flex w-full flex-col",
-                (isImmersive || isHeroView) &&
-                  "h-full min-h-0 flex-1",
-                !isImmersive && !isHeroView && "min-h-0 flex-1 gap-y-6",
+                (isImmersive || isHeroView) && "flex-1 md:h-full md:min-h-0",
+                !isImmersive && !isHeroView && "flex-1 gap-y-6 md:min-h-0",
               )}
             >
               <AuthRequiredDialog

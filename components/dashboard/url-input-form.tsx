@@ -771,7 +771,7 @@ export function UrlInputForm({
     return (
       <>
         {resumeSessionDialog}
-        <div className="relative z-10 flex h-full min-h-0 w-full flex-col gap-4 antialiased transition-opacity duration-200 ease-in-out md:grid md:grid-cols-12 md:gap-6 md:overflow-hidden">
+        <div className="relative z-10 flex w-full flex-col gap-4 antialiased transition-opacity duration-200 ease-in-out md:h-full md:min-h-0 md:grid md:grid-cols-12 md:gap-6 md:overflow-hidden">
         <aside
           className={cn(
             "flex min-h-0 flex-col gap-4 transition-all duration-300 md:col-span-4 md:min-h-0 md:overflow-hidden md:pr-2",
@@ -921,8 +921,8 @@ export function UrlInputForm({
         className={cn(
           "relative z-10 w-full",
           isHeroAtRest
-            ? "h-full min-h-0 flex-1"
-            : "mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-y-4 px-4 sm:gap-y-6",
+            ? "flex-1 md:h-full md:min-h-0"
+            : "mx-auto flex w-full max-w-7xl flex-1 flex-col gap-y-4 px-4 sm:gap-y-6",
         )}
       >
         {isHeroAtRest ? (
