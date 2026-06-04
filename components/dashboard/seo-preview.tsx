@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { AlertCircle, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
 import {
@@ -18,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { SessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import type { SeoAuditCheck, SeoAuditResult } from "@/lib/validations/seo-audit-result";
 
@@ -25,6 +28,7 @@ type SeoPreviewProps = {
   seoData: SeoAuditResult | null;
   isAuditing?: boolean;
   isGenerating?: boolean;
+  user?: SessionUser | null;
 };
 
 type AuditCategoryKey = keyof Pick<
@@ -223,7 +227,9 @@ export function SeoPreview({
   seoData,
   isAuditing = false,
   isGenerating = false,
+  user = null,
 }: SeoPreviewProps) {
+  const isGuest = user === null;
   const categories = seoData ? buildCategories(seoData) : [];
   const totalIssues = categories.reduce((sum, cat) => {
     const checks = filterCategoryChecks(
@@ -239,8 +245,29 @@ export function SeoPreview({
     })
     .map((cat) => cat.key);
 
+  const showGuestPreviewBar =
+    isGuest && seoData && !isGenerating && !isAuditing;
+
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      {showGuestPreviewBar ? (
+        <div
+          className="flex items-center gap-2 border-b border-border/50 bg-slate-50 px-4 py-2 text-xs text-muted-foreground dark:bg-slate-900/40"
+          role="status"
+        >
+          <Sparkles className="size-3.5 shrink-0 opacity-60" aria-hidden />
+          <span>
+            Preview mode.{" "}
+            <Link
+              href="/login?returnTo=%2Fbuilder"
+              className="text-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Sign in
+            </Link>{" "}
+            to save your site.
+          </span>
+        </div>
+      ) : null}
       <CardHeader className="flex flex-row items-start justify-between gap-6 pb-2">
         <div className="min-w-0 space-y-1">
           <CardTitle>SEO audit</CardTitle>
@@ -339,6 +366,7 @@ export function SeoPreview({
           <span>Generating layout from audit insights…</span>
         </CardFooter>
       )}
+
     </Card>
   );
 }

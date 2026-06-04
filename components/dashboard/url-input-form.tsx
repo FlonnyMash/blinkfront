@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { ChatEditor } from "@/components/dashboard/chat-editor";
 import { SeoPreview } from "@/components/dashboard/seo-preview";
 import { LayoutRenderer } from "@/components/renderer/LayoutRenderer";
+import type { SessionUser } from "@/lib/auth/session";
+import { saveGuestDraft, updateGuestDraftWebsite } from "@/lib/guest-draft";
 import type { ScrapeUrlResult } from "@/lib/scraper";
 import type { SeoAuditResult } from "@/lib/validations/seo-audit-result";
 import { normalizeUrl } from "@/lib/utils";
@@ -25,10 +28,17 @@ type UrlInputFormProps = {
   onWebsiteDataChange: (data: Website | null) => void;
   siteId?: string | null;
   onSiteIdChange?: (siteId: string | null) => void;
+  user?: SessionUser | null;
 };
 
 type GenerateWebsiteApiResponse =
-  | ({ success: true; data: Website; siteId?: string })
+  | {
+      success: true;
+      data: Website;
+      siteId?: string;
+      guest?: boolean;
+      guestId?: string;
+    }
   | { success: false; error: string };
 
 type SeoAuditApiResponse =
@@ -59,6 +69,7 @@ export function UrlInputForm({
   onWebsiteDataChange,
   siteId,
   onSiteIdChange,
+  user = null,
 }: UrlInputFormProps) {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +100,9 @@ export function UrlInputForm({
 
   function handleWebsiteUpdate(data: Website) {
     onWebsiteDataChange(data);
+    if (!user) {
+      updateGuestDraftWebsite(data);
+    }
   }
 
   const isBusy = isLoading || isAuditing || isGenerating;
@@ -189,6 +203,23 @@ export function UrlInputForm({
       } else {
         onSiteIdChange?.(null);
       }
+
+      if (aiResult.guest) {
+        if (aiResult.siteId) {
+          saveGuestDraft({
+            siteId: aiResult.siteId,
+            ...(aiResult.guestId ? { guestId: aiResult.guestId } : {}),
+            website: aiResult.data,
+            seoData: auditResult.data,
+            sourceUrl: scrapedResult.data.url,
+          });
+        }
+        toast.success(
+          aiResult.siteId
+            ? "Generated a preview! Sign up to save your progress."
+            : "Generated a preview! Sign in to save your progress to the cloud.",
+        );
+      }
     } catch (requestError) {
       setError(
         requestError instanceof TypeError
@@ -205,7 +236,7 @@ export function UrlInputForm({
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-6">
       <Card>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -248,68 +279,68 @@ export function UrlInputForm({
       )}
 
       {data && (
-        <SeoPreview
-          seoData={seoData}
-          isAuditing={isAuditing}
-          isGenerating={isGenerating}
-        />
-      )}
+        <div className="space-y-8">
+          <SeoPreview
+            seoData={seoData}
+            isAuditing={isAuditing}
+            isGenerating={isGenerating}
+            user={user}
+          />
 
-      {websiteData && (
-        <ChatEditor
-          currentWebsite={websiteData}
-          seoInsights={seoData ? JSON.stringify(seoData) : undefined}
-          onUpdate={handleWebsiteUpdate}
-        />
-      )}
+          {websiteData ? (
+            <div className="space-y-6">
+              <ChatEditor
+                currentWebsite={websiteData}
+                siteId={siteId ?? undefined}
+                seoInsights={seoData ? JSON.stringify(seoData) : undefined}
+                onUpdate={handleWebsiteUpdate}
+              />
 
-      {websiteData && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Live Preview</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-hidden p-0">
-              <div className="max-h-[min(70vh,720px)] overflow-y-auto">
-                <LayoutRenderer
-                  key={JSON.stringify(websiteData)}
-                  data={websiteData}
-                  siteId={siteId ?? undefined}
-                />
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Live Preview</CardTitle>
+                </CardHeader>
+                <CardContent className="overflow-hidden p-0">
+                  <div className="max-h-[min(70vh,720px)] overflow-y-auto">
+                    <LayoutRenderer
+                      key={JSON.stringify(websiteData)}
+                      data={websiteData}
+                      siteId={siteId ?? undefined}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <details className="group rounded-xl ring-1 ring-foreground/10">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+                  Debug: View JSON
+                </summary>
+                {seoData && (
+                  <details className="border-t">
+                    <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+                      Debug: SEO Audit
+                    </summary>
+                    <pre className="overflow-x-auto bg-slate-950 p-4 text-sm text-green-400">
+                      {JSON.stringify(seoData, null, 2)}
+                    </pre>
+                  </details>
+                )}
+                <pre className="overflow-x-auto border-t bg-slate-950 p-4 text-sm text-green-400">
+                  {JSON.stringify(websiteData, null, 2)}
+                </pre>
+              </details>
+            </div>
+          ) : null}
 
           <details className="group rounded-xl ring-1 ring-foreground/10">
             <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
-              Debug: View JSON
+              Raw SEO audit data
             </summary>
-            {seoData && (
-              <details className="border-t">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
-                  Debug: SEO Audit
-                </summary>
-                <pre className="overflow-x-auto bg-slate-950 p-4 text-sm text-green-400">
-                  {JSON.stringify(seoData, null, 2)}
-                </pre>
-              </details>
-            )}
-            <pre className="overflow-x-auto border-t bg-slate-950 p-4 text-sm text-green-400">
-              {JSON.stringify(websiteData, null, 2)}
+            <pre className="overflow-x-auto border-t bg-muted p-4 text-sm">
+              {JSON.stringify(data, null, 2)}
             </pre>
           </details>
-        </>
-      )}
-
-      {data && (
-        <details className="group rounded-xl ring-1 ring-foreground/10">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
-            Raw SEO audit data
-          </summary>
-          <pre className="overflow-x-auto border-t bg-muted p-4 text-sm">
-            {JSON.stringify(data, null, 2)}
-          </pre>
-        </details>
+        </div>
       )}
     </div>
   );

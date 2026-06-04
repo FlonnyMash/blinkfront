@@ -17,17 +17,20 @@ import type { Website } from "@/types/layout";
 
 type ChatEditorProps = {
   currentWebsite: Website;
+  siteId?: string;
   seoInsights?: string;
   onUpdate: (data: Website) => void;
 };
 
 export function ChatEditor({
   currentWebsite,
+  siteId,
   seoInsights,
   onUpdate,
 }: ChatEditorProps) {
   const { prompt, setPrompt, isEditing, error, submit } = useChatEditor({
     currentWebsite,
+    siteId,
     seoInsights,
     onUpdate,
   });

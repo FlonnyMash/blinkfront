@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buildDeploymentUrl } from "@/lib/deploy/vercel";
+import { getSession } from "@/lib/auth/session";
 import { isDatabaseConfigured } from "@/lib/db";
 import { listSites, type SiteStatus } from "@/lib/sites";
 
@@ -41,6 +42,7 @@ function getDeploymentDomain(): string {
 
 export async function SitesTable() {
   const deploymentDomain = getDeploymentDomain();
+  const user = await getSession();
 
   if (!isDatabaseConfigured()) {
     return (
@@ -56,7 +58,7 @@ export async function SitesTable() {
     );
   }
 
-  const sites = await listSites();
+  const sites = await listSites(user?.id);
 
   return (
     <Card className="w-full text-left">
@@ -129,6 +131,7 @@ export async function SitesTable() {
                           <LeadsDrawer
                             siteId={site.id}
                             siteLabel={site.subdomain}
+                            user={user}
                             trigger={
                               <Button
                                 type="button"

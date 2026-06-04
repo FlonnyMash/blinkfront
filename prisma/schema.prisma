@@ -18,9 +18,14 @@ model Site {
   subdomain          String     @unique
   status             SiteStatus @default(pending)
   vercelDeploymentId String
+  userId             String?
+  guestId            String?
+  layoutData         Json?
   createdAt          DateTime   @default(now())
   leads              Lead[]
 
+  @@index([userId])
+  @@index([guestId])
   @@map("sites")
 }
 

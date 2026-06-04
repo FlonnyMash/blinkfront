@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 import { editWebsiteData } from "@/lib/ai/edit-site";
+import { getGuestIdFromRequest } from "@/lib/auth/guest";
+import { getSessionFromRequest } from "@/lib/auth/session";
+import { updateSiteLayout } from "@/lib/sites";
 import { WebsiteSchema } from "@/types/layout";
 
 export const maxDuration = 60;
@@ -10,6 +13,7 @@ const EditRequestSchema = z
     currentWebsite: WebsiteSchema,
     userPrompt: z.string().min(1),
     seoInsights: z.string().optional(),
+    siteId: z.string().min(1).optional(),
   })
   .strict();
 
@@ -33,6 +37,16 @@ export async function POST(request: Request) {
       parsed.data.userPrompt,
       parsed.data.seoInsights,
     );
+
+    if (result.success && parsed.data.siteId) {
+      const session = getSessionFromRequest(request);
+      const guestId = getGuestIdFromRequest(request);
+
+      await updateSiteLayout(parsed.data.siteId, result.data, {
+        userId: session?.id ?? null,
+        guestId: session ? null : guestId ?? null,
+      });
+    }
 
     return Response.json(result, { status: 200 });
   } catch (error) {

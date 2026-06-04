@@ -6,7 +6,10 @@ import {
   getDeploymentStatus,
   normalizeSubdomain,
 } from "@/lib/deploy/vercel";
+import { getGuestIdFromRequest } from "@/lib/auth/guest";
+import { getSessionFromRequest } from "@/lib/auth/session";
 import {
+  getGuestSite,
   mapVercelStatusToSiteStatus,
   pendingDeploymentId,
   promoteDraftSite,
@@ -72,6 +75,40 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
+    }
+
+    const session = getSessionFromRequest(request);
+
+    if ("website" in parsed.data && parsed.data.siteId) {
+      if (!session) {
+        return Response.json(
+          {
+            success: false,
+            error: "Sign in to publish your site",
+            requiresAuth: true,
+          },
+          { status: 401 },
+        );
+      }
+
+      const guestId = getGuestIdFromRequest(request);
+      if (guestId) {
+        const guestSite = await getGuestSite({
+          siteId: parsed.data.siteId,
+          guestId,
+        });
+
+        if (guestSite) {
+          return Response.json(
+            {
+              success: false,
+              error: "Sign in to publish your site",
+              requiresAuth: true,
+            },
+            { status: 401 },
+          );
+        }
+      }
     }
 
     let site =

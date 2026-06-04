@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 import { generateWebsiteData } from "@/lib/ai/generate-site";
-import { createDraftSite } from "@/lib/sites";
+import { ensureGuestIdCookie, getGuestIdFromRequest } from "@/lib/auth/guest";
+import { getSessionFromRequest } from "@/lib/auth/session";
+import { createDraftSite, updateSiteLayout } from "@/lib/sites";
 import { SeoAuditResultSchema } from "@/lib/validations/seo-audit-result";
 
 export const maxDuration = 60;
@@ -30,6 +32,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const session = getSessionFromRequest(request);
+    const isGuest = !session;
+
+    let guestId: string | undefined;
+    if (isGuest) {
+      guestId = await ensureGuestIdCookie(getGuestIdFromRequest(request));
+    }
+
     const result = await generateWebsiteData(
       parsed.data.scrapedContent,
       parsed.data.seoAudit,
@@ -43,10 +53,27 @@ export async function POST(request: Request) {
       return Response.json(result, { status: 200 });
     }
 
-    const draft = await createDraftSite();
+    const draft = await createDraftSite({
+      userId: session?.id ?? null,
+      guestId: isGuest ? guestId ?? null : null,
+    });
+
+    if (draft) {
+      await updateSiteLayout(draft.id, result.data, {
+        userId: session?.id ?? null,
+        guestId: isGuest ? guestId ?? null : null,
+      });
+    }
 
     return Response.json(
-      draft ? { ...result, siteId: draft.id } : result,
+      draft
+        ? {
+            ...result,
+            siteId: draft.id,
+            guest: isGuest,
+            ...(isGuest && guestId ? { guestId } : {}),
+          }
+        : { ...result, guest: isGuest },
       { status: 200 },
     );
   } catch (error) {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { AuthRequiredDialog } from "@/components/dashboard/auth-required-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,31 +15,55 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { SessionUser } from "@/lib/auth/session";
 import type { Website } from "@/types/layout";
 
 const SLUG_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 const deploymentDomain =
   process.env.NEXT_PUBLIC_DEPLOYMENT_DOMAIN ?? "yourdomain.com";
 
+const LOGIN_HREF = "/login?returnTo=%2Fbuilder";
+
 type DashboardHeaderProps = {
   websiteData: Website | null;
   isPublishing: boolean;
+  isSaving?: boolean;
+  user: SessionUser | null;
   onPublish: (subdomain: string) => void;
+  onSave?: () => void;
 };
 
 export function DashboardHeader({
   websiteData,
   isPublishing,
+  isSaving = false,
+  user,
   onPublish,
+  onSave,
 }: DashboardHeaderProps) {
   const [open, setOpen] = useState(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [subdomain, setSubdomain] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const isGuest = !user;
 
   function normalizeSlug(value: string): string {
     const trimmed = value.trim().toLowerCase();
     const suffix = `.${deploymentDomain.toLowerCase()}`;
     return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
+  }
+
+  function handlePublishClick() {
+    if (isGuest) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    setOpen(true);
+  }
+
+  function handleSaveClick() {
+    onSave?.();
   }
 
   function handleConfirm() {
@@ -58,90 +83,130 @@ export function DashboardHeader({
 
   const canPublish = Boolean(websiteData) && !isPublishing;
 
-  return (
-    <header className="flex w-full items-center justify-between gap-4 border-b pb-4">
-      <div className="text-left">
-        <p className="text-sm font-medium">Site Builder</p>
-        <p className="text-xs text-muted-foreground">
-          {websiteData
-            ? "Ready to publish your generated site"
-            : "Generate a site to enable publishing"}
-        </p>
-      </div>
+  const publishDialog = (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setValidationError(null);
+        }
+      }}
+    >
+      {!isGuest && canPublish ? (
+        <DialogTrigger asChild>
+          <Button>Publish</Button>
+        </DialogTrigger>
+      ) : null}
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Publish your site</DialogTitle>
+          <DialogDescription>
+            Choose a site name for this deployment. Without a custom domain,
+            your site will be live at a unique{" "}
+            <span className="font-medium text-foreground">*.vercel.app</span>{" "}
+            URL. To use{" "}
+            <span className="font-medium text-foreground">
+              your-name.{deploymentDomain}
+            </span>
+            , add and verify that domain on the publish project in Vercel.
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <Button variant="outline" asChild>
-          <Link href="/dashboard">Sites</Link>
-        </Button>
-        <Dialog
-          open={open}
-          onOpenChange={(nextOpen) => {
-            setOpen(nextOpen);
-            if (!nextOpen) {
-              setValidationError(null);
-            }
-          }}
-        >
-          {canPublish ? (
-            <DialogTrigger asChild>
-              <Button>Publish</Button>
-            </DialogTrigger>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Input
+              value={subdomain}
+              onChange={(event) => {
+                setSubdomain(event.target.value);
+                setValidationError(null);
+              }}
+              placeholder="my-awesome-site"
+              disabled={isPublishing}
+              aria-invalid={validationError ? true : undefined}
+            />
+            <span className="shrink-0 text-sm text-muted-foreground">
+              .{deploymentDomain}
+            </span>
+          </div>
+          {validationError && (
+            <p className="text-sm text-red-500" role="alert">
+              {validationError}
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPublishing}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={isPublishing || !subdomain.trim()}
+          >
+            Publish
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <>
+      <header className="flex w-full items-center justify-between gap-4 border-b pb-4">
+        <div className="text-left">
+          <p className="text-sm font-medium">Site Builder</p>
+          <p className="text-xs text-muted-foreground">
+            {websiteData
+              ? "Ready to publish your generated site"
+              : "Generate a site to enable publishing"}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          {isGuest ? (
+            <Link
+              href={LOGIN_HREF}
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Sign in
+            </Link>
+          ) : (
+            <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+              <Link href="/dashboard">Sites</Link>
+            </Button>
+          )}
+
+          {!isGuest && canPublish ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveClick}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving…" : "Save"}
+            </Button>
+          ) : null}
+
+          {canPublish && isGuest ? (
+            <Button onClick={handlePublishClick}>Publish</Button>
+          ) : canPublish && !isGuest ? (
+            publishDialog
           ) : (
             <Button disabled>Publish</Button>
           )}
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Publish your site</DialogTitle>
-            <DialogDescription>
-              Choose a site name for this deployment. Without a custom domain,
-              your site will be live at a unique{" "}
-              <span className="font-medium text-foreground">*.vercel.app</span>{" "}
-              URL. To use{" "}
-              <span className="font-medium text-foreground">
-                your-name.{deploymentDomain}
-              </span>
-              , add and verify that domain on the publish project in Vercel.
-            </DialogDescription>
-          </DialogHeader>
+        </div>
+      </header>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Input
-                value={subdomain}
-                onChange={(event) => {
-                  setSubdomain(event.target.value);
-                  setValidationError(null);
-                }}
-                placeholder="my-awesome-site"
-                disabled={isPublishing}
-                aria-invalid={validationError ? true : undefined}
-              />
-              <span className="shrink-0 text-sm text-muted-foreground">
-                .{deploymentDomain}
-              </span>
-            </div>
-            {validationError && (
-              <p className="text-sm text-red-500" role="alert">
-                {validationError}
-              </p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isPublishing}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConfirm} disabled={isPublishing || !subdomain.trim()}>
-              Publish
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-        </Dialog>
-      </div>
-    </header>
+      <AuthRequiredDialog
+        open={authDialogOpen}
+        onOpenChange={setAuthDialogOpen}
+        actionLabel="publish"
+      />
+    </>
   );
 }

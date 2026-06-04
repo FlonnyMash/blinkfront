@@ -7,12 +7,14 @@ import type { Website } from "@/types/layout";
 
 type UseChatEditorOptions = {
   currentWebsite: Website;
+  siteId?: string;
   seoInsights?: string;
   onUpdate: (data: Website) => void;
 };
 
 export function useChatEditor({
   currentWebsite,
+  siteId,
   seoInsights,
   onUpdate,
 }: UseChatEditorOptions) {
@@ -34,6 +36,7 @@ export function useChatEditor({
             currentWebsite,
             userPrompt: prompt,
             seoInsights,
+            ...(siteId ? { siteId } : {}),
           }),
         });
 
@@ -58,7 +61,7 @@ export function useChatEditor({
         setIsEditing(false);
       }
     },
-    [currentWebsite, onUpdate, prompt, seoInsights],
+    [currentWebsite, onUpdate, prompt, seoInsights, siteId],
   );
 
   return {

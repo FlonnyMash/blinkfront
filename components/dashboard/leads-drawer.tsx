@@ -5,6 +5,7 @@ import { Download, Inbox, Mail } from "lucide-react";
 
 import { getLeads, type LeadRecord } from "@/actions/get-leads";
 import { Button } from "@/components/ui/button";
+import type { SessionUser } from "@/lib/auth/session";
 import {
   Sheet,
   SheetContent,
@@ -27,6 +28,7 @@ type LeadsDrawerProps = {
   siteId: string;
   siteLabel: string;
   trigger: React.ReactElement;
+  user?: SessionUser | null;
 };
 
 function formatCollectedAt(iso: string): string {
@@ -60,13 +62,25 @@ function exportLeadsToCsv(leads: LeadRecord[], filename: string): void {
   document.body.removeChild(link);
 }
 
-export function LeadsDrawer({ siteId, siteLabel, trigger }: LeadsDrawerProps) {
+export function LeadsDrawer({
+  siteId,
+  siteLabel,
+  trigger,
+  user,
+}: LeadsDrawerProps) {
   const [open, setOpen] = React.useState(false);
   const [leads, setLeads] = React.useState<LeadRecord[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+  const requiresAuth = user === null;
 
   const loadLeads = React.useCallback(async () => {
+    if (requiresAuth) {
+      setLeads([]);
+      setError("Sign in to view captured leads for your sites.");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -81,7 +95,7 @@ export function LeadsDrawer({ siteId, siteLabel, trigger }: LeadsDrawerProps) {
     }
 
     setLeads(result.leads);
-  }, [siteId]);
+  }, [requiresAuth, siteId]);
 
   React.useEffect(() => {
     if (open) {
@@ -151,9 +165,13 @@ export function LeadsDrawer({ siteId, siteLabel, trigger }: LeadsDrawerProps) {
                   <Mail className="size-5" aria-hidden />
                 </div>
                 <div className="space-y-1">
-                  <p className="font-medium text-foreground">No leads yet</p>
+                  <p className="font-medium text-foreground">
+                    {requiresAuth ? "Sign in required" : "No leads yet"}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Share your site to start collecting!
+                    {requiresAuth
+                      ? "Leads are available after you publish and sign in."
+                      : "Share your site to start collecting!"}
                   </p>
                 </div>
               </div>
