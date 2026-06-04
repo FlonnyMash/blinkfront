@@ -29,7 +29,7 @@ export function HeroSection() {
           Paste a link, let AI rebuild your site for speed and conversion, and
           publish in minutes — no code, no drag-and-drop maze.
         </p>
-        <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+        <div className="mt-10 flex flex-col items-center gap-3">
           <MarketingCtaButton>Build your site with AI</MarketingCtaButton>
           <p className="text-sm text-slate-500">
             Free to start · Deploy in one click

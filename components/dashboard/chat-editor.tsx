@@ -36,10 +36,12 @@ export function ChatEditor({
   });
 
   return (
-    <Card>
+    <Card className="border-0 bg-white/90 shadow-sm ring-1 ring-slate-200/60 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle>Chat Editor</CardTitle>
-        <CardDescription>
+        <CardTitle className="font-semibold tracking-tight text-slate-900">
+          Chat Editor
+        </CardTitle>
+        <CardDescription className="text-slate-600">
           Describe changes in natural language to update your website layout.
         </CardDescription>
       </CardHeader>
@@ -52,8 +54,13 @@ export function ChatEditor({
             onChange={(e) => setPrompt(e.target.value)}
             disabled={isEditing}
             required
+            className="border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
           />
-          <Button type="submit" disabled={isEditing}>
+          <Button
+            type="submit"
+            disabled={isEditing}
+            className="bg-indigo-600 text-white hover:bg-indigo-700"
+          >
             Submit
           </Button>
         </form>
@@ -64,8 +71,8 @@ export function ChatEditor({
         )}
       </CardContent>
       {isEditing && (
-        <CardFooter className="border-t bg-primary/5">
-          <div className="flex items-center gap-2 text-sm text-primary">
+        <CardFooter className="border-t border-indigo-100 bg-indigo-50/50">
+          <div className="flex items-center gap-2 text-sm font-medium text-indigo-700">
             <Loader2 className="size-4 animate-spin" />
             <span>AI is optimizing your design...</span>
           </div>

@@ -14,7 +14,7 @@ export function LogoCloudSection() {
     <section className="border-y border-slate-200/80 bg-slate-50/50 py-12 md:py-14">
       <div className="mx-auto max-w-6xl px-4">
         <p className="text-center text-sm font-medium tracking-wide text-slate-500">
-          Built with Blinkfront
+          Built with Blinkfront AI
         </p>
         <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {logos.map((logo) => (

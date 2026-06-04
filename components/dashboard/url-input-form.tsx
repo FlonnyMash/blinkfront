@@ -29,6 +29,7 @@ type UrlInputFormProps = {
   siteId?: string | null;
   onSiteIdChange?: (siteId: string | null) => void;
   user?: SessionUser | null;
+  onPrepareSignIn?: () => void;
 };
 
 type GenerateWebsiteApiResponse =
@@ -46,6 +47,9 @@ type SeoAuditApiResponse =
   | { success: false; error: string };
 
 const LAST_URL_STORAGE_KEY = "blinkfront:lastUrl";
+
+const appCardClassName =
+  "border-0 bg-white/90 shadow-sm ring-1 ring-slate-200/60 backdrop-blur-sm";
 
 function readStoredUrl(): string {
   try {
@@ -70,6 +74,7 @@ export function UrlInputForm({
   siteId,
   onSiteIdChange,
   user = null,
+  onPrepareSignIn,
 }: UrlInputFormProps) {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -237,8 +242,8 @@ export function UrlInputForm({
 
   return (
     <div className="w-full space-y-6">
-      <Card>
-        <CardContent>
+      <Card className={appCardClassName}>
+        <CardContent className="pt-1">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
               type="text"
@@ -253,8 +258,13 @@ export function UrlInputForm({
               }}
               disabled={isBusy}
               required
+              className="border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
             />
-            <Button type="submit" disabled={isBusy}>
+            <Button
+              type="submit"
+              disabled={isBusy}
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
+            >
               {isBusy ? (
                 <>
                   <Loader2 className="animate-spin" />
@@ -285,6 +295,7 @@ export function UrlInputForm({
             isAuditing={isAuditing}
             isGenerating={isGenerating}
             user={user}
+            onPrepareSignIn={onPrepareSignIn}
           />
 
           {websiteData ? (
@@ -296,11 +307,13 @@ export function UrlInputForm({
                 onUpdate={handleWebsiteUpdate}
               />
 
-              <Card>
+              <Card className={appCardClassName}>
                 <CardHeader>
-                  <CardTitle>Live Preview</CardTitle>
+                  <CardTitle className="font-semibold tracking-tight text-slate-900">
+                    Live Preview
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-hidden p-0">
+                <CardContent className="overflow-hidden p-0 pt-0">
                   <div className="max-h-[min(70vh,720px)] overflow-y-auto">
                     <LayoutRenderer
                       key={JSON.stringify(websiteData)}
@@ -311,13 +324,13 @@ export function UrlInputForm({
                 </CardContent>
               </Card>
 
-              <details className="group rounded-xl ring-1 ring-foreground/10">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <details className="group rounded-2xl bg-white/80 shadow-sm ring-1 ring-slate-200/60 backdrop-blur-sm">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900">
                   Debug: View JSON
                 </summary>
                 {seoData && (
                   <details className="border-t">
-                    <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+                    <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900">
                       Debug: SEO Audit
                     </summary>
                     <pre className="overflow-x-auto bg-slate-950 p-4 text-sm text-green-400">
@@ -332,8 +345,8 @@ export function UrlInputForm({
             </div>
           ) : null}
 
-          <details className="group rounded-xl ring-1 ring-foreground/10">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+          <details className="group rounded-2xl bg-white/80 shadow-sm ring-1 ring-slate-200/60 backdrop-blur-sm">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900">
               Raw SEO audit data
             </summary>
             <pre className="overflow-x-auto border-t bg-muted p-4 text-sm">

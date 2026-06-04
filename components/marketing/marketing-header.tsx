@@ -10,7 +10,7 @@ export function MarketingHeader() {
           href="/"
           className="text-sm font-semibold tracking-tight text-slate-900"
         >
-          Blinkfront
+          Blinkfront AI
         </Link>
         <nav className="flex items-center gap-2">
           <Button

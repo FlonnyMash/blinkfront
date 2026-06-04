@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AuthRequiredDialog } from "@/components/dashboard/auth-required-dialog";
@@ -31,6 +32,7 @@ type DashboardHeaderProps = {
   user: SessionUser | null;
   onPublish: (subdomain: string) => void;
   onSave?: () => void;
+  onPrepareSignIn?: () => void;
 };
 
 export function DashboardHeader({
@@ -40,7 +42,9 @@ export function DashboardHeader({
   user,
   onPublish,
   onSave,
+  onPrepareSignIn,
 }: DashboardHeaderProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [subdomain, setSubdomain] = useState("");
@@ -81,6 +85,11 @@ export function DashboardHeader({
     onPublish(slug);
   }
 
+  function handleSignInClick() {
+    onPrepareSignIn?.();
+    router.push(LOGIN_HREF);
+  }
+
   const canPublish = Boolean(websiteData) && !isPublishing;
 
   const publishDialog = (
@@ -95,7 +104,12 @@ export function DashboardHeader({
     >
       {!isGuest && canPublish ? (
         <DialogTrigger asChild>
-          <Button>Publish</Button>
+          <Button
+            size="sm"
+            className="bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            Publish
+          </Button>
         </DialogTrigger>
       ) : null}
       <DialogContent>
@@ -141,12 +155,14 @@ export function DashboardHeader({
             variant="outline"
             onClick={() => setOpen(false)}
             disabled={isPublishing}
+            className="border-slate-200 text-slate-700 hover:bg-slate-50"
           >
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={isPublishing || !subdomain.trim()}
+            className="bg-indigo-600 text-white hover:bg-indigo-700"
           >
             Publish
           </Button>
@@ -157,48 +173,64 @@ export function DashboardHeader({
 
   return (
     <>
-      <header className="flex w-full items-center justify-between gap-4 border-b pb-4">
-        <div className="text-left">
-          <p className="text-sm font-medium">Site Builder</p>
-          <p className="text-xs text-muted-foreground">
-            {websiteData
-              ? "Ready to publish your generated site"
-              : "Generate a site to enable publishing"}
-          </p>
-        </div>
+      <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+          <Link
+            href="/"
+            className="text-sm font-semibold tracking-tight text-slate-900"
+          >
+            Blinkfront AI
+          </Link>
 
-        <div className="flex shrink-0 items-center gap-3">
-          {isGuest ? (
-            <Link
-              href={LOGIN_HREF}
-              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Sign in
-            </Link>
-          ) : (
-            <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-              <Link href="/dashboard">Sites</Link>
-            </Button>
-          )}
+          <nav className="flex items-center gap-2">
+            {isGuest ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSignInClick}
+                className="border-slate-200 text-slate-700 hover:bg-slate-50"
+              >
+                Login
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                asChild
+              >
+                <Link href="/dashboard">Sites</Link>
+              </Button>
+            )}
 
-          {!isGuest && canPublish ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveClick}
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving…" : "Save"}
-            </Button>
-          ) : null}
+            {!isGuest && canPublish ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveClick}
+                disabled={isSaving}
+                className="border-slate-200 text-slate-700 hover:bg-slate-50"
+              >
+                {isSaving ? "Saving…" : "Save"}
+              </Button>
+            ) : null}
 
-          {canPublish && isGuest ? (
-            <Button onClick={handlePublishClick}>Publish</Button>
-          ) : canPublish && !isGuest ? (
-            publishDialog
-          ) : (
-            <Button disabled>Publish</Button>
-          )}
+            {canPublish && isGuest ? (
+              <Button
+                size="sm"
+                onClick={handlePublishClick}
+                className="bg-indigo-600 text-white hover:bg-indigo-700"
+              >
+                Publish
+              </Button>
+            ) : canPublish && !isGuest ? (
+              publishDialog
+            ) : (
+              <Button size="sm" disabled>
+                Publish
+              </Button>
+            )}
+          </nav>
         </div>
       </header>
 
@@ -206,6 +238,7 @@ export function DashboardHeader({
         open={authDialogOpen}
         onOpenChange={setAuthDialogOpen}
         actionLabel="publish"
+        onPrepareSignIn={onPrepareSignIn}
       />
     </>
   );

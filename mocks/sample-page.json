@@ -13,7 +13,7 @@
     {
       "type": "Header",
       "content": {
-        "logoText": "Blinkfront",
+        "logoText": "Blinkfront AI",
         "links": [
           { "label": "Features", "href": "#features" },
           { "label": "Testimonials", "href": "#testimonials" },
@@ -116,7 +116,7 @@
     {
       "type": "Footer",
       "content": {
-        "copyrightText": "© 2026 Blinkfront. All rights reserved.",
+        "copyrightText": "© 2026 Blinkfront AI. All rights reserved.",
         "links": [
           { "label": "Privacy", "href": "#privacy" },
           { "label": "Terms", "href": "#terms" },

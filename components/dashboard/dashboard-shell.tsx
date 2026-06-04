@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -10,7 +11,13 @@ import { AuthRequiredDialog } from "@/components/dashboard/auth-required-dialog"
 import { useDeploymentPolling } from "@/hooks/useDeploymentPolling";
 import type { SessionUser } from "@/lib/auth/session";
 import { clearGuestDraft, loadGuestDraft } from "@/lib/guest-draft";
-import { fetchSiteLayout, saveSiteLayout } from "@/lib/site-layout-client";
+import {
+  fetchSiteLayout,
+  loadPendingDraft,
+  savePendingDraftFromBuilder,
+  saveSiteLayout,
+  syncPendingDraftAfterAuth,
+} from "@/lib/site-layout-client";
 import { getBrandName, type Website } from "@/types/layout";
 
 type PublishSuccessResponse = {
@@ -38,54 +45,69 @@ export function DashboardShell({
   user,
   initialSiteId = null,
 }: DashboardShellProps) {
+  const router = useRouter();
   const [websiteData, setWebsiteData] = useState<Website | null>(null);
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const hydrationDone = useRef(false);
+  const hydratedForUser = useRef<string | null>(null);
+
+  const prepareSignIn = useCallback(() => {
+    savePendingDraftFromBuilder({
+      siteId: activeSiteId,
+      website: websiteData,
+    });
+  }, [activeSiteId, websiteData]);
 
   useEffect(() => {
-    if (hydrationDone.current) {
+    const userKey = user?.id ?? "guest";
+    if (hydratedForUser.current === userKey) {
       return;
     }
 
     let cancelled = false;
 
     async function hydrateDraft() {
-      const guestDraft = loadGuestDraft();
+      const pendingDraft = loadPendingDraft() ?? loadGuestDraft();
 
-      if (guestDraft) {
+      if (pendingDraft) {
         if (!cancelled) {
-          setWebsiteData(guestDraft.website);
-          setActiveSiteId(guestDraft.siteId);
+          setWebsiteData(pendingDraft.website);
+          setActiveSiteId(pendingDraft.siteId);
         }
 
         if (user) {
-          const saved = await saveSiteLayout(
-            guestDraft.siteId,
-            guestDraft.website,
-          );
+          const synced = await syncPendingDraftAfterAuth();
           if (!cancelled) {
-            if (saved.success) {
-              clearGuestDraft();
+            if (synced.success) {
+              if (synced.siteId) {
+                setActiveSiteId(synced.siteId);
+              }
+              router.refresh();
             } else {
-              toast.error(saved.error);
+              toast.error(synced.error);
             }
           }
         }
 
-        hydrationDone.current = true;
+        if (!cancelled) {
+          hydratedForUser.current = userKey;
+        }
         return;
       }
 
       if (!user) {
-        hydrationDone.current = true;
+        if (!cancelled) {
+          hydratedForUser.current = userKey;
+        }
         return;
       }
 
       const siteIdToLoad = initialSiteId ?? null;
       if (!siteIdToLoad) {
-        hydrationDone.current = true;
+        if (!cancelled) {
+          hydratedForUser.current = userKey;
+        }
         return;
       }
 
@@ -95,7 +117,9 @@ export function DashboardShell({
         setActiveSiteId(siteIdToLoad);
       }
 
-      hydrationDone.current = true;
+      if (!cancelled) {
+        hydratedForUser.current = userKey;
+      }
     }
 
     void hydrateDraft();
@@ -103,7 +127,7 @@ export function DashboardShell({
     return () => {
       cancelled = true;
     };
-  }, [user, initialSiteId]);
+  }, [user, initialSiteId, router]);
 
   useEffect(() => {
     if (websiteData) {
@@ -157,6 +181,7 @@ export function DashboardShell({
       if (!response.ok || !result.success) {
         if (result.success === false && result.requiresAuth) {
           failImmediately(result.error);
+          prepareSignIn();
           setAuthDialogOpen(true);
           return;
         }
@@ -221,7 +246,7 @@ export function DashboardShell({
   }
 
   return (
-    <div className="w-full space-y-6">
+    <>
       <DashboardHeader
         websiteData={websiteData}
         isPublishing={isPublishing}
@@ -229,30 +254,50 @@ export function DashboardShell({
         user={user}
         onPublish={handlePublish}
         onSave={handleSave}
+        onPrepareSignIn={prepareSignIn}
       />
 
-      <AuthRequiredDialog
-        open={authDialogOpen}
-        onOpenChange={setAuthDialogOpen}
-        actionLabel="publish"
-      />
+      <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
+        <div className="mb-8 space-y-3 text-center md:mb-10">
+          <p className="inline-flex items-center rounded-full border border-indigo-200/80 bg-indigo-50 px-3 py-1 text-xs font-medium tracking-wide text-indigo-700">
+            AI Site Builder
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
+            Generate your high-performance site
+          </h1>
+          <p className="mx-auto max-w-xl text-sm leading-relaxed text-slate-600 md:text-base">
+            Enter a URL, let AI rebuild your layout for speed and conversion,
+            then publish in one click.
+          </p>
+        </div>
 
-      {deploymentStatus !== "IDLE" ? (
-        <DeploymentStatusCard
-          status={deploymentStatus}
-          liveUrl={liveUrl}
-          error={deploymentError}
-          onDismiss={resetDeployment}
-        />
-      ) : null}
+        <div className="mx-auto w-full max-w-3xl space-y-6">
+          <AuthRequiredDialog
+            open={authDialogOpen}
+            onOpenChange={setAuthDialogOpen}
+            actionLabel="publish"
+            onPrepareSignIn={prepareSignIn}
+          />
 
-      <UrlInputForm
-        websiteData={websiteData}
-        onWebsiteDataChange={handleWebsiteDataChange}
-        onSiteIdChange={setActiveSiteId}
-        siteId={activeSiteId}
-        user={user}
-      />
-    </div>
+          {deploymentStatus !== "IDLE" ? (
+            <DeploymentStatusCard
+              status={deploymentStatus}
+              liveUrl={liveUrl}
+              error={deploymentError}
+              onDismiss={resetDeployment}
+            />
+          ) : null}
+
+          <UrlInputForm
+            websiteData={websiteData}
+            onWebsiteDataChange={handleWebsiteDataChange}
+            onSiteIdChange={setActiveSiteId}
+            siteId={activeSiteId}
+            user={user}
+            onPrepareSignIn={prepareSignIn}
+          />
+        </div>
+      </div>
+    </>
   );
 }
