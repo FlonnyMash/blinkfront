@@ -19,13 +19,24 @@ export function mapVercelStatusToSiteStatus(
   return "pending";
 }
 
-export async function listSites(): Promise<Site[]> {
+export type SiteWithLeadCount = Site & {
+  _count: {
+    leads: number;
+  };
+};
+
+export async function listSites(): Promise<SiteWithLeadCount[]> {
   if (!isDatabaseConfigured()) {
     return [];
   }
 
   return prisma.site.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      _count: {
+        select: { leads: true },
+      },
+    },
   });
 }
 
@@ -35,6 +46,40 @@ export async function getSiteById(id: string): Promise<Site | null> {
   }
 
   return prisma.site.findUnique({ where: { id } });
+}
+
+export async function createDraftSite(): Promise<Site | null> {
+  if (!isDatabaseConfigured()) {
+    return null;
+  }
+
+  const token = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+
+  return prisma.site.create({
+    data: {
+      subdomain: `draft-${token}`,
+      vercelDeploymentId: `draft:${token}`,
+      status: "pending",
+    },
+  });
+}
+
+export async function promoteDraftSite(
+  siteId: string,
+  subdomain: string,
+): Promise<Site | null> {
+  if (!isDatabaseConfigured()) {
+    return null;
+  }
+
+  return prisma.site.update({
+    where: { id: siteId },
+    data: {
+      subdomain,
+      vercelDeploymentId: pendingDeploymentId(subdomain),
+      status: "pending",
+    },
+  });
 }
 
 export async function upsertSiteRecord(input: {

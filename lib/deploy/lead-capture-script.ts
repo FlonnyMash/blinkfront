@@ -64,7 +64,7 @@ function bindForm(form){
     var apiUrl=form.getAttribute("data-api-url");
     var siteId=form.getAttribute("data-site-id");
     if(!apiUrl||!siteId){
-      showError(form,"This form is not configured yet.");
+      showError(form,"Lead capture is not ready yet. Try again after the site finishes generating.");
       return;
     }
     var buttonText=form.getAttribute("data-button-text")||"Submit";

@@ -30,7 +30,7 @@ High-converting order: Header → Hero → Features → Testimonials → FAQ →
 
 ## Component-specific copywriting
 ### Hero
-headline = ultra-punchy benefit-driven UVP. NEVER "Welcome to X", "We offer services", or "Your trusted partner". State the exact transformation. subheadline sharpens the promise. ctaText = specific action.
+headline = ultra-punchy benefit-driven UVP. NEVER "Welcome to X", "We offer services", or "Your trusted partner". State the exact transformation. subheadline sharpens the promise. **ctaText = email capture button label** (e.g. "Get early access", "Join the waitlist").
 
 ### Features
 Benefits only—translate specs into outcomes (e.g. "24/7 cloud sync" → "Access your files anywhere, instantly"). Exactly 3 items; title = benefit, description = tangible gain.
@@ -43,7 +43,7 @@ Exactly 3 items; quotes cite concrete results aligned with the UVP. Never wrap \
 Address conversion anxieties (pricing, migration, security, onboarding, ROI)—not boring generic Q&A. Direct, reassuring answers.
 
 ### CTA
-headline restates value; buttonText = strong micro-commitment (not "Submit" or "Learn more").
+headline restates value; **buttonText = email capture button label** (not "Submit" or "Learn more"). Live site shows email field + this button.
 
 ### Header / Footer
 Header logoText: 1–4 word brand only (never the hero UVP). Customize nav **labels** only; section hrefs (#features, #testimonials, #faq, #cta) are enforced from layout. Footer: concise copyright + useful links.

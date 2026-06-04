@@ -19,13 +19,17 @@ import type { SeoAuditResult } from "@/lib/validations/seo-audit-result";
 import { normalizeUrl } from "@/lib/utils";
 import type { SeoAudit } from "@/lib/validations/seo";
 import type { Website } from "@/types/layout";
-import type { GenerateWebsiteResult } from "@/lib/ai/generate-site";
 
 type UrlInputFormProps = {
   websiteData: Website | null;
   onWebsiteDataChange: (data: Website | null) => void;
-  publishedSiteId?: string | null;
+  siteId?: string | null;
+  onSiteIdChange?: (siteId: string | null) => void;
 };
+
+type GenerateWebsiteApiResponse =
+  | ({ success: true; data: Website; siteId?: string })
+  | { success: false; error: string };
 
 type SeoAuditApiResponse =
   | { success: true; data: SeoAuditResult }
@@ -53,7 +57,8 @@ async function readApiError(response: Response, fallback: string): Promise<strin
 export function UrlInputForm({
   websiteData,
   onWebsiteDataChange,
-  publishedSiteId,
+  siteId,
+  onSiteIdChange,
 }: UrlInputFormProps) {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -110,6 +115,7 @@ export function UrlInputForm({
     setData(null);
     setSeoData(null);
     onWebsiteDataChange(null);
+    onSiteIdChange?.(null);
 
     try {
       const scrapeResponse = await fetch("/api/scrape", {
@@ -166,7 +172,7 @@ export function UrlInputForm({
         }),
       });
 
-      const aiResult = (await generateResponse.json()) as GenerateWebsiteResult;
+      const aiResult = (await generateResponse.json()) as GenerateWebsiteApiResponse;
 
       if (!generateResponse.ok || !aiResult.success) {
         setError(
@@ -178,6 +184,11 @@ export function UrlInputForm({
       }
 
       onWebsiteDataChange(aiResult.data);
+      if (aiResult.siteId) {
+        onSiteIdChange?.(aiResult.siteId);
+      } else {
+        onSiteIdChange?.(null);
+      }
     } catch (requestError) {
       setError(
         requestError instanceof TypeError
@@ -263,7 +274,7 @@ export function UrlInputForm({
                 <LayoutRenderer
                   key={JSON.stringify(websiteData)}
                   data={websiteData}
-                  siteId={publishedSiteId ?? undefined}
+                  siteId={siteId ?? undefined}
                 />
               </div>
             </CardContent>

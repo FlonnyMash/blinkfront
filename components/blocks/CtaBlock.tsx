@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { LeadForm } from "@/components/ui/lead-form";
 import { cn } from "@/lib/utils";
 import type { CtaContent, CtaVariant } from "@/types/layout";
@@ -24,27 +23,12 @@ function CtaAction({
   buttonText: string;
   layout: "cta-default" | "cta-split" | "cta-minimal";
 }) {
-  if (siteId) {
-    return (
-      <LeadForm siteId={siteId} buttonText={buttonText} layout={layout} />
-    );
-  }
-
-  const buttonClass =
-    layout === "cta-minimal"
-      ? "border-2 border-[var(--primary)] px-8 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--background)]"
-      : layout === "cta-split"
-        ? "w-full bg-[var(--background)] px-8 text-lg text-[var(--primary)] hover:bg-[var(--background)]/90 md:w-auto"
-        : "bg-[var(--background)] text-[var(--primary)] hover:bg-[var(--background)]/90";
-
   return (
-    <Button
-      size="lg"
-      variant={layout === "cta-minimal" ? "outline" : "secondary"}
-      className={buttonClass}
-    >
-      {buttonText}
-    </Button>
+    <LeadForm
+      siteId={siteId}
+      buttonText={buttonText}
+      layout={layout}
+    />
   );
 }
 

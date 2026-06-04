@@ -9,6 +9,7 @@ import {
 import {
   mapVercelStatusToSiteStatus,
   pendingDeploymentId,
+  promoteDraftSite,
   updateSiteDeployment,
   updateSiteStatusByDeploymentId,
   upsertSiteRecord,
@@ -21,6 +22,7 @@ const PublishWebsiteRequestSchema = z
   .object({
     website: WebsiteSchema,
     subdomain: z.string().min(1),
+    siteId: z.string().min(1).optional(),
   })
   .strict();
 
@@ -72,11 +74,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const site = await upsertSiteRecord({
-      subdomain: slug,
-      vercelDeploymentId: pendingDeploymentId(slug),
-      status: "pending",
-    });
+    let site =
+      "website" in parsed.data && parsed.data.siteId
+        ? await promoteDraftSite(parsed.data.siteId, slug)
+        : null;
+
+    if (!site) {
+      site = await upsertSiteRecord({
+        subdomain: slug,
+        vercelDeploymentId: pendingDeploymentId(slug),
+        status: "pending",
+      });
+    }
 
     const result =
       "website" in parsed.data

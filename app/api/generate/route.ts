@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { generateWebsiteData } from "@/lib/ai/generate-site";
+import { createDraftSite } from "@/lib/sites";
 import { SeoAuditResultSchema } from "@/lib/validations/seo-audit-result";
 
 export const maxDuration = 60;
@@ -38,7 +39,16 @@ export async function POST(request: Request) {
       },
     );
 
-    return Response.json(result, { status: 200 });
+    if (!result.success) {
+      return Response.json(result, { status: 200 });
+    }
+
+    const draft = await createDraftSite();
+
+    return Response.json(
+      draft ? { ...result, siteId: draft.id } : result,
+      { status: 200 },
+    );
   } catch (error) {
     return Response.json(
       {

@@ -8,7 +8,7 @@ export type LeadFormLayout =
   | "cta-minimal";
 
 export type LeadFormMarkupProps = {
-  siteId: string;
+  siteId?: string;
   buttonText: string;
   layout?: LeadFormLayout;
   className?: string;
@@ -63,7 +63,7 @@ export function LeadFormMarkup({
   return (
     <form
       className={cn("lead-capture-form", formLayoutClasses[layout], className)}
-      data-site-id={siteId}
+      {...(siteId ? { "data-site-id": siteId } : {})}
       data-api-url={apiUrl}
       data-button-text={buttonText}
       data-thanks-message={THANKS_MESSAGE}

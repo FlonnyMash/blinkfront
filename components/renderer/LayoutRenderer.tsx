@@ -104,7 +104,7 @@ export function LayoutRenderer({ data, siteId, className }: LayoutRendererProps)
       style={getThemeStyle(data.theme)}
     >
       {layout.map((block, index) => renderBlock(block, index, siteId))}
-      {siteId ? <LeadCaptureScript /> : null}
+      <LeadCaptureScript />
     </div>
   );
 }

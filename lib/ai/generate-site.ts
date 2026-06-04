@@ -41,7 +41,7 @@ Header and Footer are minimal chrome (brand nav, copyright). The narrative arc l
 
 ## Component-specific copywriting
 ### Hero
-The headline must be an ultra-punchy, benefit-driven Unique Value Proposition (UVP). NEVER use generic templates like "Welcome to X", "We offer services", or "Your trusted partner". State the exact transformation the user gets (outcome, speed, or risk removed). Subheadline sharpens the promise. ctaText is a specific action (e.g. "Start free trial", "Get my audit").
+The headline must be an ultra-punchy, benefit-driven Unique Value Proposition (UVP). NEVER use generic templates like "Welcome to X", "We offer services", or "Your trusted partner". State the exact transformation the user gets (outcome, speed, or risk removed). Subheadline sharpens the promise. **ctaText labels the email capture submit button** in the live Hero (e.g. "Get early access", "Join the waitlist", "Request a demo")—never vague "Click here" or "Learn more".
 
 ### Features
 Focus purely on benefits, not raw specifications. Translate every feature into an outcome.
@@ -58,7 +58,7 @@ Do not wrap \`quote\` values in quotation marks—the UI adds typographic quotes
 Do not list boring or generic questions. Address real conversion anxieties and buying objections: pricing transparency, migration effort, contract lock-in, security/compliance proofs, onboarding time, support SLAs, ROI skepticism. Answers are direct and reassuring—never "contact us for details".
 
 ### CTA
-headline = final value restatement. buttonText = strong micro-commitment. Avoid "Submit", "Click here", "Learn more".
+headline = final value restatement. **buttonText labels the email capture submit button** (e.g. "Get the guide", "Notify me at launch"). The live site renders an email field + this button—avoid "Submit", "Click here", "Learn more".
 
 ### Header / Footer
 Header \`logoText\` MUST equal the **Brand name** given in the user prompt (scraped company name)—never the hero UVP, never a marketing tagline. Nav link **labels** are customizable; hrefs are synced to sections automatically. Footer: concise copyright + 2–3 useful links.

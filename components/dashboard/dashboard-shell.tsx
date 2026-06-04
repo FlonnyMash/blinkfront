@@ -25,13 +25,20 @@ type PublishResponse = PublishSuccessResponse | PublishFailureResponse;
 
 export function DashboardShell() {
   const [websiteData, setWebsiteData] = useState<Website | null>(null);
-  const [publishedSiteId, setPublishedSiteId] = useState<string | null>(null);
+  const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (websiteData) {
       document.title = getBrandName(websiteData);
     }
   }, [websiteData]);
+
+  function handleWebsiteDataChange(data: Website | null) {
+    setWebsiteData(data);
+    if (!data) {
+      setActiveSiteId(null);
+    }
+  }
   const {
     status: deploymentStatus,
     liveUrl,
@@ -55,7 +62,11 @@ export function DashboardShell() {
       const response = await fetch("/api/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ website: websiteData, subdomain }),
+        body: JSON.stringify({
+          website: websiteData,
+          subdomain,
+          ...(activeSiteId ? { siteId: activeSiteId } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -70,7 +81,7 @@ export function DashboardShell() {
       }
 
       if (result.siteId) {
-        setPublishedSiteId(result.siteId);
+        setActiveSiteId(result.siteId);
       }
 
       if (result.status === "READY") {
@@ -110,8 +121,9 @@ export function DashboardShell() {
 
       <UrlInputForm
         websiteData={websiteData}
-        onWebsiteDataChange={setWebsiteData}
-        publishedSiteId={publishedSiteId}
+        onWebsiteDataChange={handleWebsiteDataChange}
+        onSiteIdChange={setActiveSiteId}
+        siteId={activeSiteId}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, Inbox, RefreshCw } from "lucide-react";
 
 import { syncVercelStatusAction } from "@/actions/sync-vercel-status";
+import { LeadsDrawer } from "@/components/dashboard/leads-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,7 +79,8 @@ export async function SitesTable() {
                   <th className="px-4 py-3 font-medium">Site Name</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">View Live</th>
-                  <th className="px-4 py-3 font-medium text-right">Sync</th>
+                  <th className="px-4 py-3 font-medium">Leads</th>
+                  <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,6 +89,9 @@ export async function SitesTable() {
                     site.subdomain,
                     deploymentDomain,
                   );
+                  const leadCount = site._count.leads;
+                  const leadLabel =
+                    leadCount === 1 ? "1 Lead" : `${leadCount} Leads`;
 
                   return (
                     <tr key={site.id} className="border-b last:border-b-0">
@@ -112,14 +117,42 @@ export async function SitesTable() {
                           <ExternalLink className="size-3.5" aria-hidden />
                         </Link>
                       </td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          variant={leadCount > 0 ? "emerald" : "outline"}
+                        >
+                          {leadLabel}
+                        </Badge>
+                      </td>
                       <td className="px-4 py-3 text-right">
-                        <form action={syncVercelStatusAction}>
-                          <input type="hidden" name="siteId" value={site.id} />
-                          <Button type="submit" variant="outline" size="sm">
-                            <RefreshCw className="size-3.5" aria-hidden />
-                            Sync
-                          </Button>
-                        </form>
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <LeadsDrawer
+                            siteId={site.id}
+                            siteLabel={site.subdomain}
+                            trigger={
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                aria-label={`View leads for ${site.subdomain}`}
+                              >
+                                <Inbox className="size-3.5" aria-hidden />
+                                Leads
+                              </Button>
+                            }
+                          />
+                          <form action={syncVercelStatusAction}>
+                            <input
+                              type="hidden"
+                              name="siteId"
+                              value={site.id}
+                            />
+                            <Button type="submit" variant="outline" size="sm">
+                              <RefreshCw className="size-3.5" aria-hidden />
+                              Sync
+                            </Button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   );

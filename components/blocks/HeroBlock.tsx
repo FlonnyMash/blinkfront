@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { LeadForm } from "@/components/ui/lead-form";
 import { cn } from "@/lib/utils";
 import type { HeroContent, HeroVariant } from "@/types/layout";
@@ -52,24 +51,12 @@ function HeroCopy({
       >
         {content.subheadline}
       </p>
-      {siteId ? (
-        <LeadForm
-          siteId={siteId}
-          buttonText={content.ctaText}
-          layout="hero"
-          className={variant === "centered" ? "sm:justify-center" : undefined}
-        />
-      ) : (
-        <Button
-          size="lg"
-          className={cn(
-            "bg-[var(--primary)] text-[var(--background)] hover:bg-[var(--primary)]/90",
-            variant === "centered" && "px-10 text-base",
-          )}
-        >
-          {content.ctaText}
-        </Button>
-      )}
+      <LeadForm
+        siteId={siteId}
+        buttonText={content.ctaText}
+        layout="hero"
+        className={variant === "centered" ? "sm:justify-center" : undefined}
+      />
     </>
   );
 }
