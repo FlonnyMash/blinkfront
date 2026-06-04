@@ -35,7 +35,7 @@ function HeroCopy({ content }: { content: HeroContent }) {
 }
 
 export function HeroBlock({ content }: HeroBlockProps) {
-  const variant = content.variant ?? "default";
+  const variant = content.variant ?? "centered";
 
   if (variant === "split") {
     return (

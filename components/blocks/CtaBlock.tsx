@@ -28,7 +28,7 @@ function CtaCopy({ content }: { content: CtaContent }) {
 }
 
 export function CtaBlock({ content }: CtaBlockProps) {
-  const variant = content.variant ?? "default";
+  const variant = content.variant ?? "split";
 
   if (variant === "minimal") {
     return (

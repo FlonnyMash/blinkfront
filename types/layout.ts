@@ -49,9 +49,22 @@ export const HeroVariantSchema = z.enum(["default", "centered", "split"]);
 export const FeaturesVariantSchema = z.enum(["grid", "list", "cards"]);
 export const CtaVariantSchema = z.enum(["default", "minimal", "split"]);
 
+/** All variant tokens the generation schema may emit (block-type-specific subset required per block). */
+export const LayoutVariantGenerationSchema = z.enum([
+  "",
+  "default",
+  "centered",
+  "split",
+  "grid",
+  "list",
+  "cards",
+  "minimal",
+]);
+
 export type HeroVariant = z.infer<typeof HeroVariantSchema>;
 export type FeaturesVariant = z.infer<typeof FeaturesVariantSchema>;
 export type CtaVariant = z.infer<typeof CtaVariantSchema>;
+export type LayoutVariantGeneration = z.infer<typeof LayoutVariantGenerationSchema>;
 
 export const NavLinkSchema = z
   .object({
@@ -73,7 +86,7 @@ export const HeroContentSchema = z
     headline: z.string().min(1),
     subheadline: z.string().min(1),
     ctaText: z.string().min(1),
-    variant: HeroVariantSchema.optional().default("default"),
+    variant: HeroVariantSchema.default("centered"),
     sectionClassName: z.string().optional(),
     containerClassName: z.string().optional(),
   })
@@ -91,7 +104,7 @@ export const FeaturesContentSchema = z
   .object({
     heading: z.string().min(1),
     items: z.array(FeatureItemSchema).length(3),
-    variant: FeaturesVariantSchema.optional().default("cards"),
+    variant: FeaturesVariantSchema.default("cards"),
     sectionClassName: z.string().optional(),
     gridClassName: z.string().optional(),
   })
@@ -134,7 +147,7 @@ export const CtaContentSchema = z
     headline: z.string().min(1),
     subheadline: z.string().optional(),
     buttonText: z.string().min(1),
-    variant: CtaVariantSchema.optional().default("default"),
+    variant: CtaVariantSchema.default("split"),
     sectionClassName: z.string().optional(),
     containerClassName: z.string().optional(),
   })
@@ -201,7 +214,7 @@ export const FooterBlockSchema = z
 
 /** Guides the LLM on `content.variant`; paired with block `type` in LayoutBlockGenerationSchema. */
 const VARIANT_GENERATION_DESCRIPTION =
-  "CRITICAL: You MUST choose a variant that matches this block's `type`. For type Hero use exactly one of: 'default' | 'centered' | 'split'. For type Features use exactly one of: 'grid' | 'list' | 'cards'. For type CTA use exactly one of: 'default' | 'minimal' | 'split'. For Header, Testimonials, FAQ, Footer use empty string \"\". Do NOT invent values or default every block to 'default'.";
+  "CRITICAL: Pick exactly one enum token matching this block's `type`. Hero: default | centered | split. Features: grid | list | cards. CTA: default | minimal | split. Header, Testimonials, FAQ, Footer: \"\" only. Analyze copy before choosing—never blindly reuse the same token across blocks.";
 
 /** OpenAI strict structured output requires every property key to appear in `required`. */
 const LayoutBlockItemGenerationSchema = z
@@ -228,7 +241,7 @@ export const BlockContentGenerationSchema = z
     sectionClassName: z.string(),
     containerClassName: z.string(),
     gridClassName: z.string(),
-    variant: z.string().describe(VARIANT_GENERATION_DESCRIPTION),
+    variant: LayoutVariantGenerationSchema.describe(VARIANT_GENERATION_DESCRIPTION),
     items: z.array(LayoutBlockItemGenerationSchema),
     links: z.array(FooterLinkSchema),
   })
@@ -283,7 +296,7 @@ function pickOptional(
 
 /** Fallback only when the model omits, blanks, or hallucinates an invalid variant. */
 function coerceVariant<T extends string>(
-  raw: string | undefined,
+  raw: LayoutVariantGeneration | string | undefined,
   schema: z.ZodType<T>,
   fallback: T,
 ): T {
@@ -515,7 +528,7 @@ function parseLayoutBlock(block: LayoutBlockGeneration): LayoutBlock {
           headline: trimRequired(content.headline || content.heading),
           subheadline: trimRequired(content.subheadline),
           ctaText: trimRequired(content.ctaText || content.buttonText),
-          variant: coerceVariant(content.variant, HeroVariantSchema, "default"),
+          variant: coerceVariant(content.variant, HeroVariantSchema, "centered"),
           ...pickOptional({ sectionClassName, containerClassName }),
         }),
       };
@@ -574,7 +587,7 @@ function parseLayoutBlock(block: LayoutBlockGeneration): LayoutBlock {
         content: CtaContentSchema.parse({
           headline: trimRequired(content.headline || content.heading),
           buttonText: trimRequired(content.buttonText || content.ctaText),
-          variant: coerceVariant(content.variant, CtaVariantSchema, "default"),
+          variant: coerceVariant(content.variant, CtaVariantSchema, "split"),
           ...pickOptional({
             subheadline: optionalNonEmpty(content.subheadline),
             sectionClassName,

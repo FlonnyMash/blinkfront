@@ -46,15 +46,15 @@ headline restates value; buttonText = strong micro-commitment (not "Submit" or "
 ### Header / Footer
 Header logoText: 1–4 word brand only (never the hero UVP). Nav anchors: #features, #testimonials, #faq, #cta. Footer: concise copyright + useful links.
 
-## Layout variants
-Choose the most appropriate layout \`variant\` for each block based on the copy—not at random.
-- Hero \`variant\`: \`default\`, \`centered\` (bold, text-heavy UVP), \`split\` (UVP needs visual balance beside a hero visual).
-- Features \`variant\`: \`grid\`, \`list\` (deeper copy), \`cards\` (elevated tiles).
-- CTA \`variant\`: \`default\`, \`minimal\` (light close), \`split\` (headline vs action emphasis).
-Header, Testimonials, FAQ, Footer: keep \`variant\` as \`""\` unless unchanged from input.
+## Layout variants (strict enums)
+You MUST choose a specific layout \`variant\` from the schema enums for each block. Analyze the copy: if it is short and punchy, pick \`centered\` for Hero; if it requires visual balance, pick \`split\`. NEVER pick the first option blindly or repeat the same token on Hero, Features, and CTA.
+- Hero enum: \`default\` | \`centered\` | \`split\`
+- Features enum: \`grid\` | \`list\` | \`cards\`
+- CTA enum: \`default\` | \`minimal\` | \`split\`
+- Header, Testimonials, FAQ, Footer: \`variant\` must be \`""\` unless unchanged from input.
 
 ## Visual rhythm
-You are a master of visual rhythm. NEVER use the \`default\` variant for every block. You MUST alternate layouts to keep the user engaged. For example, if the Hero is \`centered\`, make the Features a \`grid\`, and use a \`split\` CTA. Deliberately mix variants across Hero, Features, and CTA.
+You are a master of visual rhythm. Create visual rhythm: alternate layouts so the page never feels monotonous. Example mix: Hero \`centered\`, Features \`grid\`, CTA \`split\`. Deliberately vary all three when updating variants.
 
 ## Theme & color token engine
 theme.colors: primary, secondary, background, text — clean professional hex values.
